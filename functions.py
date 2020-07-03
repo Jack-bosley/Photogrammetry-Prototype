@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from scipy import signal
 import scipy.ndimage.filters as filters
 from scipy.optimize import minimize
+from scipy.spatial import KDTree
 import time
 
 
@@ -36,14 +37,10 @@ def get_dy(image):
 
 # Finding common features
 #------------------------------------------------------------------------------                 
-def get_corners_fast(image):
-    d = 16
-    d2 = d*2
+def get_corners_fast(image, plot_Harris_response = False, contrast_grad_threshold=10):
+    d = 8
     k = 0.05
-    
-    width = image.width; height = image.height
-    
-    
+        
     # Contruct the aperture to convolve with the gradients for the structure tensor
     aperture = np.outer(signal.gaussian(d, d/2), signal.gaussian(d, d/2))
 
@@ -66,37 +63,96 @@ def get_corners_fast(image):
     A_22 = signal.fftconvolve(I_yy, aperture, mode='same')
     
 
-    # Compute harris response (normalised)
+    # Compute harris response
     detM = np.multiply(A_11, A_22) - np.square(A_12)
     trM = np.add(A_11, A_12)
     M = detM - k * np.square(trM)
     
 
     # Find the local maxima
-    max_values = filters.maximum_filter(M, d2)
+    max_values = filters.maximum_filter(M, 4)
     rows, cols = np.where(M == max_values)
-    points = list(zip(rows, cols))
     
-
-    # Compute normalised weights for each point
-    weights = M[np.where(M == max_values)]
-    distance_to_edge = 1 - ((np.abs(cols - (width / 2)) / width) +
-                            (np.abs(rows - (height / 2)) / height))
-    weights = np.multiply(weights, distance_to_edge)
-    weights = np.divide(weights, np.max(weights))
-     
+    # Filter low contrast points
+    high_contrast_points = np.where(I_xy[rows, cols] > contrast_grad_threshold)
+    rows_high_contrast = [rows[i] for i in high_contrast_points][0]
+    cols_high_contrast = [cols[i] for i in high_contrast_points][0]
     
-    # Sort points by weights
-    weights_sorted, points_sorted = zip(*reversed(sorted(zip(weights, points))))
-    points_sorted = list(points_sorted); weights_sorted = list(weights_sorted)
+    points = list(zip(rows_high_contrast, cols_high_contrast))
     
+    if plot_Harris_response:
+        plt.contourf(M, 50)
+        plt.show()
     
     # Return best points
-    return points_sorted[:20], weights_sorted[:20]
+    return points
+
+
+def compare(features_1, features_2, plot_feature_scatter=False): 
+    # Computes the average squared distances between pairs of points
+    def fit_score(delta, pairs):
+        dx, dy = delta
         
+        summed_sq_dist = 0
+        for p in pairs:
+            p1, p2 = features_1[p[0]], features_2[p[1]]
+            x1, y1 = p1; x1 += dx; y1 += dy
+            x2, y2 = p2
+            
+            summed_sq_dist += ((x1 - x2)**2) + ((y1 - y2)**2)
+    
+        return summed_sq_dist / len(pairs)
+    
+    
+    def plot(delta, pairs):
+        dx, dy = delta
+        P1, P2 = zip(*pairs)
+        
+        F1 = [features_1[i] for i in P1]
+        F2 = [features_2[i] for i in P2]
+          
+        x1, y1 = zip(*F1); x1 += dx; y1 += dy
+        x2, y2 = zip(*F2)
+        
+        plt.scatter(y1, x1, marker='.')
+        plt.scatter(y2, x2, marker='.')
+        
+#        d_x = np.subtract(x2, x1)
+#        d_y = np.subtract(y2, y1)     
+#        for data in zip(x1, y1, d_x, d_y):
+#            x, y, dx, dy = data
+#            dx *= 4; dy *= 4
+#            plt.arrow(y, x, dy, dx)
+        
+        plt.axis('equal')
+        plt.show()
+    
 
+    # Construct a KD tree with the first image's feature points
+    T1 = KDTree(features_1)
+    
+    # Find the closest points in 1 to the points in 2
+    pair_distances_k2, paired_2_k2 = T1.query(features_2, 2)
+    paired_2 = list(zip(*paired_2_k2))[0]
+    neighbour_distance_ratio = np.array([p_d[0] / p_d[1] for p_d in pair_distances_k2])
+    
+    # Cull all pairs with neighbour distance ratios greater than 0.5
+    pairs = [(j, i) for i, j in enumerate(paired_2)]
+    valid_pairs = list(np.where(neighbour_distance_ratio < 0.5)[0])
+    pairs = [pairs[i] for i in valid_pairs]
+    
+    # Shift pairs around until optimal
+    bnds = ((-50, 50), (-50, 50))
+    res = minimize(fit_score, [0, 0], args=pairs, bounds=bnds, method='SLSQP')
 
-def compare(features_1, features_2, dx_prev = 0, dy_prev = 0, plot = False):
+    if plot_feature_scatter: 
+        plot(res.x, pairs)
+
+    
+
+    return res.x
+
+def compare_bad(features_1, features_2, dx_prev = 0, dy_prev = 0, plot = False):
     def fit_score(delta):
         dx, dy = delta
         

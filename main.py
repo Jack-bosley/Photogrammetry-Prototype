@@ -15,21 +15,23 @@ from functions import compare, get_corners_fast
 
 
 def impose_features(feature_points, image, scale_factor = 1, directory = "", name="Corners"):
-    points, weights = feature_points
-    rows, cols = zip(*points)
+
+    if directory != "" and not os.path.isdir(directory):
+        os.mkdir(directory)
+
+    rows, cols = zip(*feature_points)
     
     d = ImageDraw.Draw(image)
-    fnt = ImageFont.truetype("arial.ttf", 40)
-    dot_size = 24
-    for i, data in enumerate(zip(rows, cols, weights)):
-        r_s, c_s, w = data
+    fnt = ImageFont.truetype("arial.ttf", 20)
+    dot_size = 5
+    for i, data in enumerate(zip(rows, cols)):
         
-        r = scale_factor * r_s; c = scale_factor * c_s
-        colour = (int(w * 255), 0, int((1 - w) * 255))
-        dot_size = (w * 24) + 5
+        r_s, c_s = data
+        r = r_s * scale_factor
+        c = c_s * scale_factor        
         
-        d.line([(c-dot_size, r-dot_size), (c+dot_size, r+dot_size)], fill=colour, width=5)
-        d.line([(c-dot_size, r+dot_size), (c+dot_size, r-dot_size)], fill=colour, width=5)
+        d.line([(c-dot_size, r-dot_size), (c+dot_size, r+dot_size)], width=2)
+        d.line([(c-dot_size, r+dot_size), (c+dot_size, r-dot_size)], width=2)
         
         d.text((c, r + 10), str(i), font=fnt)
     
@@ -37,14 +39,28 @@ def impose_features(feature_points, image, scale_factor = 1, directory = "", nam
     image.close()
     
     
-def main():
-    # Iterate through pictures
-    directory = "Photos2"
-    scale_factor = 12  
+def main():    
+    # Find all pictures containing name
+    directory = "Video2"
+    name = "frame"
+    files = os.listdir(directory)
+    numbers = []
+    for f in files:
+        if name not in f:
+            files.remove(f)
+        else:
+            numbers.append(int(f.split(name)[1].split('.')[0]))
+    numbers, files = zip(*sorted(zip(numbers, files)))
+    
+    
+    scale_factor = 2
+    
     
     fp1, fp2 = "", ""
-    dx_prev, dy_prev = 0, 0
-    for i, name in enumerate(os.listdir(directory)):
+    for i, name in enumerate(files):
+        if i > 5:
+            break
+        
         # If the first image's features have been found, reassign to fp2
         if fp1 != "":
             fp2 = fp1
@@ -55,14 +71,15 @@ def main():
                                      image.height // scale_factor)).convert("L")
                 
         # Get the locations of the features
-        fp1 = get_corners_fast(image_scaled)
+        fp1 = get_corners_fast(image_scaled, False)
         
         # If the second image's features have been found,
         #  compare current with previous features
         if fp2 != "":
-            dx_prev, dy_prev = compare(fp1, fp2, dx_prev, dy_prev, True)
-            print(dx_prev, dy_prev)
-        
-            
+            compare(fp1, fp2, True)
+            #print(dx * scale_factor,"\t",dy * scale_factor)
+            break
+               
+    
 if __name__ == '__main__':
     main()
