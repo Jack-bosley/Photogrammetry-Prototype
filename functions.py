@@ -36,7 +36,7 @@ def get_dy(image):
 
 # Finding common features
 #------------------------------------------------------------------------------                 
-def get_corners_fast(image, use_fft = False):
+def get_corners_fast(image):
     d = 16
     d2 = d*2
     k = 0.05
@@ -76,7 +76,7 @@ def get_corners_fast(image, use_fft = False):
     max_values = filters.maximum_filter(M, d2)
     rows, cols = np.where(M == max_values)
     points = list(zip(rows, cols))
-
+    
 
     # Compute normalised weights for each point
     weights = M[np.where(M == max_values)]
@@ -87,9 +87,9 @@ def get_corners_fast(image, use_fft = False):
      
     
     # Sort points by weights
-    points_sorted = [p for _,p in reversed(sorted(zip(weights, points)))]
-    weights_sorted = list(reversed(sorted(weights)))
-
+    weights_sorted, points_sorted = zip(*reversed(sorted(zip(weights, points))))
+    points_sorted = list(points_sorted); weights_sorted = list(weights_sorted)
+    
     
     # Return best points
     return points_sorted[:20], weights_sorted[:20]
@@ -131,7 +131,7 @@ def compare(features_1, features_2, dx_prev = 0, dy_prev = 0, plot = False):
         x2, y2 = zip(*points_2)
         
         plt.scatter(np.add(y1, -dy), np.add(x1, -dx))
-        plt.scatter(y2, x2)
+        plt.scatter(y2, x2, marker='x')
         plt.axis('equal')
         plt.show()
 
