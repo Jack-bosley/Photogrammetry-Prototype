@@ -8,8 +8,8 @@ Created on Wed Jul  1 16:55:51 2020
 import os
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-
 import time
+
 
 from functions import compare, get_corners_fast
 
@@ -39,12 +39,12 @@ def impose_features(feature_points, image, scale_factor = 1, directory = "", nam
     
 def main():
     # Iterate through pictures
-    directory = "Photos2"
-    scale_factor = 12   
+    directory = "PhotosG"
+    scale_factor = 12  
     
-    start = time.time()
-    
+    begin = time.time()
     fp1, fp2 = "", ""
+    dx_prev, dy_prev = 0, 0
     for i, name in enumerate(os.listdir(directory)):
         # If the first image's features have been found, reassign to fp2
         if fp1 != "":
@@ -55,19 +55,27 @@ def main():
         image_scaled = image.resize((image.width // scale_factor, 
                                      image.height // scale_factor)).convert("L")
         
+        start = time.time()
+        
         # Get the locations of the features
         fp1 = get_corners_fast(image_scaled)
-        #impose_features(fp1, image, scale_factor, "", "Corners" + str(i))
+        
+        fp1 = get_corners_fast(image_scaled, True)
+        
         
         comp_start = time.time()
+        
         # If the second image's features have been found,
         #  compare current with previous features
-        if fp2 != "":
-            print(np.multiply(compare(fp1, fp2), scale_factor))
+#        if fp2 != "":
+#            dx_prev, dy_prev = compare(fp1, fp2, dx_prev, dy_prev, True)
+#            print(dx_prev, dy_prev)
             
-    end = time.time()
-    print("Corner Detection %f\nFeature Matching %f\nTotal %f" % (comp_start - start, end - comp_start, end - start))
-    
+            
+        end = time.time()
+        print("Corner Detection %f\nFeature Matching %f\nTotal %f" % (comp_start - start, end - comp_start, end - start))
+    finish = time.time()
+    print("total time %f" % (finish - begin))
             
 if __name__ == '__main__':
     main()
