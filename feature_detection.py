@@ -110,54 +110,82 @@ def get_corners_fast(image, plot_Harris_response = False):
 
 # Guess which features correspond to the same point in 3d space
 #------------------------------------------------------------------------------
-def match_features(features_1, features_2):
+def match_features(features_prev, features_curr):
     
-    threshold_distance = 5
-    threshold_ratio = 0.7
+    threshold_distance = 10
+    threshold_ratio = 0.4
     
-    # Construct a KD tree with the first image's feature points
-    T1 = KDTree(features_1)
+    # Construct a KD tree with the current image's feature points
+    T1 = KDTree(features_curr)
     
-    # Find the closest points in 1 to the points in 2
-    pair_distances_k2, paired_2_k2 = T1.query(features_2, 2)
-    paired_2 = list(zip(*paired_2_k2))[0]
-    neighbour_distance_ratio = np.array([p_d[0] / p_d[1] for p_d in pair_distances_k2])
-    neighbour_distance = np.array([p_d[0] for p_d in pair_distances_k2])
+    # Find the closest 2 points in current to the points in prev
+    paired_distances, paired_current = T1.query(features_prev, 2)
+    paired_curr_closest = list(zip(*paired_current))[0]
+    neighbour_distance_ratio = np.array([p_d[0] / p_d[1] for p_d in paired_distances])
+    neighbour_distance = np.array([p_d[0] for p_d in paired_distances])
     
     # Cull all pairs with neighbour distance ratios greater than threshold_ratio
     #  and greater separation than threshold_distance
-    pairs = [(j, i) for i, j in enumerate(paired_2)]
+    pairs = [(i, j) for i, j in enumerate(paired_curr_closest)]
     valid_pairs = list(np.where((neighbour_distance_ratio < threshold_ratio) & 
                                 (neighbour_distance < threshold_distance))[0])
     pairs = [pairs[i] for i in valid_pairs]
-    confidences = [1/(neighbour_distance_ratio[i] + 0.01) for i in valid_pairs] 
+    confidences = [1/((neighbour_distance_ratio[i] * neighbour_distance[i]) + 0.01) \
+                   for i in valid_pairs] 
+    
+    # Sort by confidence
+    confidences, pairs = zip(*reversed(sorted(zip(confidences, pairs))))
+    confidences = list(confidences)
+    pairs = list(pairs)
+    
+    # Delete duplicates with lowest confidence
+    pairs_prev, pairs_curr = zip(*pairs)
+    dupes = [i for i,x in enumerate(pairs_curr) if pairs_curr.count(x) > 1]
+    best_options = []
+    deleted = 0
+    for d in dupes:
+        if pairs_curr[d] not in best_options:
+            best_options.append(pairs_curr[d])
+        else:
+            del confidences[d - deleted]
+            del pairs[d - deleted]
+            deleted += 1
 
-    return zip(*reversed(sorted(zip(confidences, pairs))))
+    return confidences, pairs
 
 
 # Maintain the dictionary of features
 #------------------------------------------------------------------------------
 def initialise_feature_dictionary(feature_histories, feature_weights, 
-                                  features_1, features_2):
+                                  features_prev, features_curr):
     
     # Attempt to match features between first and second set
-    confidences, pairs = match_features(features_1, features_2)
+    confidences, pairs = match_features(features_prev, features_curr)
 
-    for i,data in enumerate(zip(confidences, pairs)):
+    # Add all pairs to the dictionary
+    for i, data in enumerate(zip(confidences, pairs)):
         c, p = data
         p1, p2 = p
         
         feature_weights[i] = c
-        feature_histories[i] = [features_1[p1], features_2[p2]]
+        feature_histories[i] = [features_prev[p1], features_curr[p2]]
         
-    print(feature_histories)
 
 
 def update_feature_dictionary(feature_histories, feature_weights,
-                              features):
-    print("update")
+                              features_prev, features_curr):
+    
+    # Get the coordinates of features in the dictionary from prev frame
+    prev_matched_features = \
+        list(list(zip(*list(feature_histories.values())))[-1])
+    
+    # Attempt to match features between current and dictionary
+    confidences, pairs = match_features(features_curr, prev_matched_features)
+    
+    print(pairs)
+    
 
-
+    
 
 
 

@@ -33,8 +33,11 @@ def get_images(directory, name):
     
 
 def main():  
+    directory = "Video2"
+    stop_after = 1
+    
     # Get all files in order
-    numbers, files = get_images("Video2", "frame")
+    numbers, files = get_images(directory, "frame")
     
     
     feature_histories = {}
@@ -45,6 +48,9 @@ def main():
     # Iterate through files
     scale_factor = 2
     for i, name in enumerate(files):
+        if i > stop_after:
+            break
+        
         # Open current image and scale down for speed
         image = Image.open(name)
         image_scaled = np.array(image.resize((image.width // scale_factor, 
@@ -60,14 +66,14 @@ def main():
                                           features_prev, features)
         elif i > 1:
             update_feature_dictionary(feature_histories, feature_weights, 
-                                      features)
+                                      features_prev, features)
             
-            break
+            #break
 
         # Store previous features
         features_prev = features
         
-    impose_persistent_features(feature_histories, scale_factor, files[:2], "Video2/Imposed", "Corner")
+    impose_persistent_features(feature_histories, scale_factor, files[:(stop_after+1)], directory + "/Imposed", "Corner")
     
 if __name__ == '__main__':
     main()

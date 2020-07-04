@@ -34,6 +34,9 @@ def impose_features(feature_points, image, scale_factor = 1, directory = "", nam
 
 def impose_persistent_features(feature_histories, scale_factor, files, directory, name):
     
+    if directory != "" and not os.path.isdir(directory):
+        os.mkdir(directory)
+        
     # Drawing data
     fnt = ImageFont.truetype("arial.ttf", 20)
     dot_size = 5
@@ -52,7 +55,7 @@ def impose_persistent_features(feature_histories, scale_factor, files, directory
             
             d.line([(c-dot_size, r-dot_size), (c+dot_size, r+dot_size)], width=2)
             d.line([(c-dot_size, r+dot_size), (c+dot_size, r-dot_size)], width=2)
-            d.text((c, r + dot_size), str(j), font=fnt)
+            d.text((c - 4*dot_size, r - 4*dot_size), str(j), font=fnt)
         
         # Save the edited image to specified directory
         image.save(((directory + "/") if directory != "" else "") + (name + str(i) + ".bmp"))
