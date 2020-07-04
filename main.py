@@ -10,8 +10,9 @@ import numpy as np
 import time
 from PIL import Image
 
-from feature_detection import get_corners_fast, match_features
-from debugging import impose_features
+from feature_detection import get_corners_fast, \
+    initialise_feature_dictionary, update_feature_dictionary
+from debugging import impose_features, impose_persistent_features
 
 def get_images(directory, name):
     
@@ -35,31 +36,37 @@ def main():
     # Get all files in order
     numbers, files = get_images("Video2", "frame")
     
+    
+    feature_histories = {}
+    feature_weights = {}
+    
+    features_prev = ""
+    
     # Iterate through files
-    scale_factor = 2   
-    fp1, fp2 = "", ""
+    scale_factor = 2
     for i, name in enumerate(files):
-        if i > 5:
-            break
-        
-        # If the first image's features have been found, reassign to fp2
-        if fp1 != "":
-            fp2 = fp1
-        
         # Open current image and scale down for speed
         image = Image.open(name)
         image_scaled = image.resize((image.width // scale_factor, 
                                      image.height // scale_factor)).convert("L")
                 
         # Get the locations of the features
-        fp1 = get_corners_fast(image_scaled, False)
+        features = get_corners_fast(image_scaled, False)        
         
-        # If the second image's features have been found,
-        #  compare current with previous features
-        if fp2 != "":
-            print(match_features(fp1, fp2))
+        # If multiple images have been scanned for features, attempt to match them
+        if i == 1:
+            initialise_feature_dictionary(feature_histories, feature_weights, 
+                                          features_prev, features)
+        elif i > 1:
+            update_feature_dictionary(feature_histories, feature_weights, 
+                                      features)
+            
             break
-               
+
+        # Store previous features
+        features_prev = features
+        
+    impose_persistent_features(feature_histories, scale_factor, files[:2], "Video2/Imposed", "Corner")
     
 if __name__ == '__main__':
     main()

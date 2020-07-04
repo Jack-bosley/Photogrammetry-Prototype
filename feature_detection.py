@@ -33,7 +33,7 @@ def get_dy(image):
 
     return np.subtract(im_up, im_down).astype(np.int32)
 
-def get_corners_fast(image, plot_Harris_response = False, contrast_grad_threshold=5):
+def get_corners_fast(image, plot_Harris_response = False, contrast_grad_threshold=20):
     d = 8
     k = 0.05
         
@@ -89,6 +89,9 @@ def get_corners_fast(image, plot_Harris_response = False, contrast_grad_threshol
 #------------------------------------------------------------------------------
 def match_features(features_1, features_2):
     
+    threshold_distance = 5
+    threshold_ratio = 0.7
+    
     # Construct a KD tree with the first image's feature points
     T1 = KDTree(features_1)
     
@@ -96,11 +99,52 @@ def match_features(features_1, features_2):
     pair_distances_k2, paired_2_k2 = T1.query(features_2, 2)
     paired_2 = list(zip(*paired_2_k2))[0]
     neighbour_distance_ratio = np.array([p_d[0] / p_d[1] for p_d in pair_distances_k2])
+    neighbour_distance = np.array([p_d[0] for p_d in pair_distances_k2])
     
-    # Cull all pairs with neighbour distance ratios greater than 0.5
+    # Cull all pairs with neighbour distance ratios greater than threshold_ratio
+    #  and greater separation than threshold_distance
     pairs = [(j, i) for i, j in enumerate(paired_2)]
-    valid_pairs = list(np.where(neighbour_distance_ratio < 0.5)[0])
+    valid_pairs = list(np.where((neighbour_distance_ratio < threshold_ratio) & 
+                                (neighbour_distance < threshold_distance))[0])
     pairs = [pairs[i] for i in valid_pairs]
+    confidences = [1/(neighbour_distance_ratio[i] + 0.01) for i in valid_pairs] 
 
-    return pairs
+    return zip(*reversed(sorted(zip(confidences, pairs))))
+
+
+# Maintain the dictionary of features
+#------------------------------------------------------------------------------
+def initialise_feature_dictionary(feature_histories, feature_weights, 
+                                  features_1, features_2):
+    
+    # Attempt to match features between first and second set
+    confidences, pairs = match_features(features_1, features_2)
+
+    for i,data in enumerate(zip(confidences, pairs)):
+        c, p = data
+        p1, p2 = p
+        
+        feature_weights[i] = c
+        feature_histories[i] = [features_1[p1], features_2[p2]]
+        
+    print(feature_histories)
+
+
+def update_feature_dictionary(feature_histories, feature_weights,
+                              features):
+    print("update")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

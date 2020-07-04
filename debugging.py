@@ -25,9 +25,35 @@ def impose_features(feature_points, image, scale_factor = 1, directory = "", nam
         c = c_s * scale_factor        
         
         d.line([(c-dot_size, r-dot_size), (c+dot_size, r+dot_size)], width=2)
-        d.line([(c-dot_size, r+dot_size), (c+dot_size, r-dot_size)], width=2)
-        
+        d.line([(c-dot_size, r+dot_size), (c+dot_size, r-dot_size)], width=2)        
         d.text((c, r + 10), str(i), font=fnt)
     
     image.save(((directory + "/") if directory != "" else "") + (name + ".bmp"))
     image.close()
+
+
+def impose_persistent_features(feature_histories, scale_factor, files, directory, name):
+    
+    # Drawing data
+    fnt = ImageFont.truetype("arial.ttf", 20)
+    dot_size = 5
+    
+    # Iterate over all files considered
+    for i, f in enumerate(files):
+        # Open the image for editing
+        image = Image.open(f)
+        d = ImageDraw.Draw(image)
+        
+        # Iterate over all feature points
+        for j in feature_histories:
+            r_s, c_s = feature_histories[j][i]
+            r = r_s * scale_factor
+            c = c_s * scale_factor  
+            
+            d.line([(c-dot_size, r-dot_size), (c+dot_size, r+dot_size)], width=2)
+            d.line([(c-dot_size, r+dot_size), (c+dot_size, r-dot_size)], width=2)
+            d.text((c, r + dot_size), str(j), font=fnt)
+        
+        # Save the edited image to specified directory
+        image.save(((directory + "/") if directory != "" else "") + (name + str(i) + ".bmp"))
+        image.close()
