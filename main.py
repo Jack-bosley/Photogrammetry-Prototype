@@ -7,42 +7,15 @@ Created on Wed Jul  1 16:55:51 2020
 
 import os
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
 import time
+from PIL import Image
 
+from feature_detection import get_corners_fast, match_features
+from debugging import impose_features
 
-from functions import compare, get_corners_fast
-
-
-def impose_features(feature_points, image, scale_factor = 1, directory = "", name="Corners"):
-
-    if directory != "" and not os.path.isdir(directory):
-        os.mkdir(directory)
-
-    rows, cols = zip(*feature_points)
+def get_images(directory, name):
     
-    d = ImageDraw.Draw(image)
-    fnt = ImageFont.truetype("arial.ttf", 20)
-    dot_size = 5
-    for i, data in enumerate(zip(rows, cols)):
-        
-        r_s, c_s = data
-        r = r_s * scale_factor
-        c = c_s * scale_factor        
-        
-        d.line([(c-dot_size, r-dot_size), (c+dot_size, r+dot_size)], width=2)
-        d.line([(c-dot_size, r+dot_size), (c+dot_size, r-dot_size)], width=2)
-        
-        d.text((c, r + 10), str(i), font=fnt)
-    
-    image.save(((directory + "/") if directory != "" else "") + (name + ".bmp"))
-    image.close()
-    
-    
-def main():    
-    # Find all pictures containing name
-    directory = "Video2"
-    name = "frame"
+    # Find all pictures containing name in directory
     files = os.listdir(directory)
     numbers = []
     for f in files:
@@ -50,12 +23,20 @@ def main():
             files.remove(f)
         else:
             numbers.append(int(f.split(name)[1].split('.')[0]))
-    numbers, files = zip(*sorted(zip(numbers, files)))
     
+    # Modify files to contain full path
+    files = [directory + "/" + f for f in files]
     
-    scale_factor = 2
+    # Order by number in name and return 
+    return zip(*sorted(zip(numbers, files)))
     
+
+def main():  
+    # Get all files in order
+    numbers, files = get_images("Video2", "frame")
     
+    # Iterate through files
+    scale_factor = 2   
     fp1, fp2 = "", ""
     for i, name in enumerate(files):
         if i > 5:
@@ -66,7 +47,7 @@ def main():
             fp2 = fp1
         
         # Open current image and scale down for speed
-        image = Image.open(directory + "/" + name)
+        image = Image.open(name)
         image_scaled = image.resize((image.width // scale_factor, 
                                      image.height // scale_factor)).convert("L")
                 
@@ -76,8 +57,7 @@ def main():
         # If the second image's features have been found,
         #  compare current with previous features
         if fp2 != "":
-            compare(fp1, fp2, True)
-            #print(dx * scale_factor,"\t",dy * scale_factor)
+            print(match_features(fp1, fp2))
             break
                
     
