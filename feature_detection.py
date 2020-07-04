@@ -14,42 +14,58 @@ from scipy.optimize import minimize
 from scipy.spatial import KDTree
 import time
 
+# Sobel kernels
+#------------------------------------------------------------------------------
+d_dx = np.array([[ -1,  0,  1],
+                 [ -2,  0,  2],
+                 [ -1,  0,  1]])
+
+d_dy = np.array([[ -1, -2, -1],
+                 [  0,  0,  0],
+                 [  1,  2,  1]])
+
+d_dxx = np.array([[  1,  0, -2,  0,  1],
+                  [  4,  0, -8,  0,  4],
+                  [  6,  0,-12,  0,  6],
+                  [  1,  0, -2,  0,  1],
+                  [  4,  0, -8,  0,  4]])
+
+d_dyy = np.array([[  1,  4,  6,  4,  1],
+                  [  0,  0,  0,  0,  0],
+                  [ -2, -8,-12, -8, -2],
+                  [  0,  0,  0,  0,  0],
+                  [  1,  4,  6,  4,  1]])
+
+d_dxy = np.array([[ -1, -2,  0,  2,  1],
+                  [ -2, -4,  0,  4,  2],
+                  [  0,  0,  0,  0,  0],
+                  [  2,  4,  0, -4, -2],
+                  [  1,  2,  0, -2,  1]])
+
+# laplace
+l_xy = np.array([[ -1, -1, -1],
+                 [ -1,  8, -1],
+                 [ -1, -1, -1]])
 
 # Finding common features
 #------------------------------------------------------------------------------
-def get_dx(image):
-    im_left  = np.array(image.transform(image.size, Image.AFFINE, 
-                                        (1, 0, -1, 0, 1, 0)), dtype=np.int8)
-    im_right = np.array(image.transform(image.size, Image.AFFINE, 
-                                        (1, 0,  1, 0, 1, 0)), dtype=np.int8)
-
-    return np.subtract(im_right, im_left).astype(np.int32)
-
-def get_dy(image):
-    im_up    = np.array(image.transform(image.size, Image.AFFINE, 
-                                        (1, 0, 0, 0, 1,  1)), dtype=np.int8)
-    im_down  = np.array(image.transform(image.size, Image.AFFINE, 
-                                        (1, 0, 0, 0, 1, -1)), dtype=np.int8)
-
-    return np.subtract(im_up, im_down).astype(np.int32)
-
-def get_corners_fast(image, plot_Harris_response = False, contrast_grad_threshold=20):
+def get_corners_fast(image, plot_Harris_response = False):
     d = 8
-    k = 0.05
+    k = 0.04
         
     # Contruct the aperture to convolve with the gradients for the structure tensor
     aperture = np.outer(signal.gaussian(d, d/2), signal.gaussian(d, d/2))
 
 
     # Get image gradients
-    I_x = get_dx(image)
-    I_y = get_dy(image)
+    I_dx = signal.fftconvolve(image, d_dx, mode='same')
+    I_dy = signal.fftconvolve(image, d_dy, mode='same')
     
     
     # Compute squares of gradients 
-    I_xx = np.square(I_x)
-    I_yy = np.square(I_y)
-    I_xy = np.multiply(I_x, I_y)
+    I_xx = np.square(I_dx)
+    I_yy = np.square(I_dy)
+    I_xy = np.multiply(I_dx, I_dy)
     
 
     # Structure tensor elements can be found by convolving
@@ -63,25 +79,32 @@ def get_corners_fast(image, plot_Harris_response = False, contrast_grad_threshol
     detM = np.multiply(A_11, A_22) - np.square(A_12)
     trM = np.add(A_11, A_12)
     M = detM - k * np.square(trM)
-    
+    M = np.subtract(M, np.min(M))
+    M = np.divide(M, np.max(M))
 
     # Find the local maxima
-    max_values = filters.maximum_filter(M, 4)
+    max_values = filters.maximum_filter(M, d)
     rows, cols = np.where(M == max_values)
     
-    # Filter low contrast points
-    high_contrast_points = np.where(I_xy[rows, cols] > contrast_grad_threshold)
-    rows_high_contrast = [rows[i] for i in high_contrast_points][0]
-    cols_high_contrast = [cols[i] for i in high_contrast_points][0]
     
-    points = list(zip(rows_high_contrast, cols_high_contrast))
-    
+    # Find intensity of peaks
+    #  and ilter low intensity points
+    M_intensity = signal.fftconvolve(M, l_xy, mode='same')
+    avg = np.average(M_intensity)
+    high_contrast_points = np.where(M_intensity[rows, cols] > 2*avg)
+    rows = [rows[i] for i in high_contrast_points][0]
+    cols = [cols[i] for i in high_contrast_points][0]
+
+
+    # Plot the harris response graph if desired
     if plot_Harris_response:
-        plt.contourf(M, 50)
+        plt.contourf(M_intensity, 50)
+        plt.colorbar()
+        plt.axis('equal')
         plt.show()
     
     # Return best points
-    return points
+    return list(zip(rows, cols))
 
 
 

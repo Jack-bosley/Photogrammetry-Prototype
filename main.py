@@ -47,11 +47,12 @@ def main():
     for i, name in enumerate(files):
         # Open current image and scale down for speed
         image = Image.open(name)
-        image_scaled = image.resize((image.width // scale_factor, 
-                                     image.height // scale_factor)).convert("L")
+        image_scaled = np.array(image.resize((image.width // scale_factor, 
+                                              image.height // scale_factor)).convert("L"), 
+                                dtype=np.int16)
                 
         # Get the locations of the features
-        features = get_corners_fast(image_scaled, False)        
+        features = get_corners_fast(image_scaled, False)  
         
         # If multiple images have been scanned for features, attempt to match them
         if i == 1:
