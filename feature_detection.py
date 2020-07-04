@@ -82,6 +82,7 @@ def get_corners_fast(image, plot_Harris_response = False):
     M = np.subtract(M, np.min(M))
     M = np.divide(M, np.max(M))
 
+
     # Find the local maxima
     max_values = filters.maximum_filter(M, d)
     rows, cols = np.where(M == max_values)
@@ -94,6 +95,17 @@ def get_corners_fast(image, plot_Harris_response = False):
     high_contrast_points = np.where(M_intensity[rows, cols] > 2*avg)
     rows = [rows[i] for i in high_contrast_points][0]
     cols = [cols[i] for i in high_contrast_points][0]
+
+
+    # Filter out points on the edge
+    r_max, c_max = np.shape(image)
+    dist_to_edge = np.array([np.min([rows[i], 
+                                     cols[i], 
+                                     r_max - rows[i], 
+                                     c_max - cols[i]]) \
+                             for i in range(len(rows))])
+    rows = rows[np.where(dist_to_edge > d)]
+    cols = cols[np.where(dist_to_edge > d)]
 
 
     # Plot the harris response graph if desired
@@ -181,7 +193,7 @@ def update_feature_dictionary(feature_histories, feature_weights,
     
     # Attempt to match features between current and dictionary
     confidences, pairs = match_features(features_curr, prev_matched_features)
-    
+        
     print(pairs)
     
 
