@@ -15,7 +15,7 @@ from scipy.spatial import KDTree
 import time
 
 
-# For finding derivatives in images
+# Finding common features
 #------------------------------------------------------------------------------
 def get_dx(image):
     im_left  = np.array(image.transform(image.size, Image.AFFINE, 
@@ -33,11 +33,7 @@ def get_dy(image):
 
     return np.subtract(im_up, im_down).astype(np.int32)
 
-
-
-# Finding common features
-#------------------------------------------------------------------------------                 
-def get_corners_fast(image, plot_Harris_response = False, contrast_grad_threshold=10):
+def get_corners_fast(image, plot_Harris_response = False, contrast_grad_threshold=5):
     d = 8
     k = 0.05
         
@@ -152,6 +148,12 @@ def compare(features_1, features_2, plot_feature_scatter=False):
 
     return res.x
 
+
+
+
+
+
+## NOT ROBUST ENOUGH
 def compare_bad(features_1, features_2, dx_prev = 0, dy_prev = 0, plot = False):
     def fit_score(delta):
         dx, dy = delta

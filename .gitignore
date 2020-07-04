@@ -1,3 +1,6 @@
-# Don't bother backing up the video folder
+# Don't bother backing up the video folders
 Video1/
 Video2/
+
+# Ignore pdfs
+Reading/
