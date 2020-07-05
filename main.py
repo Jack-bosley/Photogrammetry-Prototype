@@ -11,8 +11,9 @@ import time
 from PIL import Image
 
 from feature_detection import get_corners_fast
-from debugging import impose_features, impose_persistent_features
 from feature_classifier import BRIEF_classifier
+from feature_matching import get_matches
+from debugging import impose_features, impose_persistent_features
 
 def get_images(directory, name):
     
@@ -34,14 +35,15 @@ def get_images(directory, name):
 
 def main():  
     directory = "Video2"
-    stop_after = 2
+    stop_after = 1
     
     # Get all files in order
     numbers, files = get_images(directory, "frame")
     
     # Generate a BRIEF classifier
     brief = BRIEF_classifier(128, 25)
-    
+    prev_feature_locations = ""
+    prev_feature_descriptors = ""
     
     # Iterate through files
     scale_factor = 2
@@ -56,10 +58,25 @@ def main():
                                 dtype=np.int16)
                 
         # Get the locations and descriptors of the features
-        feature_locations = get_corners_fast(image_scaled, False, 25)
+        feature_locations = get_corners_fast(image_scaled, False, brief.S)
         feature_descriptors = brief(image_scaled, feature_locations)
         
-        #print(feature_descriptors)
+        if i >= 1:
+            matches_p, matches_c = get_matches(prev_feature_descriptors, 
+                                               feature_descriptors, brief.n / 16)
+        
+            matched_features_p = [prev_feature_locations[i] for i in matches_p]
+            matched_features_c = [feature_locations[i] for i in matches_c]
+            
+            impose_features(matched_features_c, image, scale_factor, directory+"/Imposed", "Corners"+str(i))
+            impose_features(matched_features_p, Image.open(files[i-1]), scale_factor, directory+"/Imposed", "Corners"+str(i-1))
+
+            
+        
+        prev_feature_locations = feature_locations
+        prev_feature_descriptors = feature_descriptors
+        
+        
         
         
         

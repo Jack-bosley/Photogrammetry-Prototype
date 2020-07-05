@@ -95,7 +95,7 @@ def get_corners_fast(image, plot_Harris_response = False, dist_to_edge_threshold
     #  and ilter low intensity points
     M_intensity = signal.fftconvolve(M, l_xy, mode='same')
     avg = np.average(M_intensity)
-    high_contrast_points = np.where(M_intensity[rows, cols] > 2*avg)
+    high_contrast_points = np.where(M_intensity[rows, cols] > 4*avg)
     rows = [rows[i] for i in high_contrast_points][0]
     cols = [cols[i] for i in high_contrast_points][0]
 

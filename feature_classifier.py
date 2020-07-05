@@ -14,8 +14,9 @@ import scipy.ndimage.filters as filters
 class BRIEF_classifier: 
     
     # Initialise the classifier with datasets needed for classification
-    def __init__(self, n, S):
-        print("new BRIEF classifier [%d]  (%d x %d)" % (n, S, S))
+    def __init__(self, n, S): 
+        self.n = n
+        self.S = S
         
         # Generate the locations of the tests
         self.X1 = np.array(np.clip(np.random.normal(scale=0.04*(S**2), size=(n)), -S, S), 
@@ -38,7 +39,6 @@ class BRIEF_classifier:
         # Compare pixel values according to test locations
         descriptor = [(image_smoothed[fx + self.X1, fy + self.Y1] >
                        image_smoothed[fx + self.X2, fy + self.Y2]) for (fx, fy) in features]
-        
-        print(np.shape(descriptor))
+
         # Return the description of the feature points
         return descriptor
