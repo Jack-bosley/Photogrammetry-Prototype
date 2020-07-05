@@ -35,17 +35,13 @@ def get_images(directory, name):
 
 def main():  
     directory = "Video1"
-    stop_after = 1000
+    stop_after = 1
     
     # Get all files in order
     numbers, files = get_images(directory, "frame")
     
     # Generate a BRIEF classifier
     brief = BRIEF_classifier(128, 25)
-    features = Feature_dictionary(brief.n / 8)
-    
-    feature_location_histories = []
-    feature_descriptor_histories = []
     
     # Iterate through files
     scale_factor = 2
@@ -62,19 +58,8 @@ def main():
         # Get the locations and descriptors of the features
         feature_locations = get_corners_fast(image_scaled, False, brief.S)
         feature_descriptors = brief(image_scaled, feature_locations)
-        features.update_dictionary(feature_descriptors)
-        
-        
-        # Store the history of features for debugging purposes
-        feature_location_histories.append(feature_locations)
-        feature_descriptor_histories.append(feature_descriptors)
-    
-    print(features)
-    for i, (loc, des) in enumerate(zip(
-            feature_location_histories, feature_descriptor_histories)):
-        
-        impose_features(features, loc, des, Image.open(files[i]), scale_factor, directory + "/Impose", "Corners"+str(i))
-    
+
+        print(feature_descriptors)
 
 if __name__ == '__main__':
     main()

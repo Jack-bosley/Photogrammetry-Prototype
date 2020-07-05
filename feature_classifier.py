@@ -5,6 +5,7 @@ Created on Sun Jul  5 13:22:53 2020
 @author: Jack
 """
 
+import ctypes
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
@@ -33,12 +34,13 @@ class BRIEF_classifier:
 
     # This classifier is function-like, return descriptors of all feature points in image
     def __call__(self, image, features):
+        
         # Smooth the image to mitigate effects of noise
         image_smoothed = signal.fftconvolve(image, self.smoothing_kernel, mode='same')
-        
+            
         # Compare pixel values according to test locations
-        descriptor = [(image_smoothed[fx + self.X1, fy + self.Y1] >
-                       image_smoothed[fx + self.X2, fy + self.Y2]) for (fx, fy) in features]
-
+        descriptor = [np.packbits(image_smoothed[fx + self.X1, fy + self.Y1] >
+                                  image_smoothed[fx + self.X2, fy + self.Y2]).view(np.float32) for (fx, fy) in features]
+    
         # Return the description of the feature points
         return descriptor
