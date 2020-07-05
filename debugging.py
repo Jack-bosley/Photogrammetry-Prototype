@@ -7,56 +7,37 @@ Created on Sat Jul  4 13:39:31 2020
 
 import os
 from PIL import Image, ImageDraw, ImageFont
+from feature_matching import Feature_dictionary
 
-def impose_features(feature_points, image, scale_factor = 1, directory = "", name="Corners"):
+def impose_features(feature_dictionary, feature_points, feature_descriptors, 
+                    image, scale_factor = 1, directory = "", name="Corners"):
 
+    # Create directory to save images to if does not exist
     if directory != "" and not os.path.isdir(directory):
         os.mkdir(directory)
 
-    rows, cols = zip(*feature_points)
-    
+
+    # Set up image for drawing
     d = ImageDraw.Draw(image)
     fnt = ImageFont.truetype("arial.ttf", 20)
-    dot_size = 5
-    for i, data in enumerate(zip(rows, cols)):
-        
+    dot_size = 2
+    
+    
+    # Iterate over all features
+    for i, data in enumerate(feature_points):
+        # Scale position to image
         r_s, c_s = data
         r = r_s * scale_factor
         c = c_s * scale_factor        
         
-        d.line([(c-dot_size, r-dot_size), (c+dot_size, r+dot_size)], width=2)
-        d.line([(c-dot_size, r+dot_size), (c+dot_size, r-dot_size)], width=2)        
-        d.text((c, r + 10), str(i), font=fnt)
+        
+        # Get feature index in dictionary
+        feature_number = feature_dictionary.descriptor_index(feature_descriptors[i])
+        
+        # Draw feature on picture
+        d.line([(c-dot_size, r-dot_size), (c+dot_size, r+dot_size)], width=1)
+        d.line([(c-dot_size, r+dot_size), (c+dot_size, r-dot_size)], width=1)        
+        d.text((c, r + 10), str(feature_number), font=fnt)
     
     image.save(((directory + "/") if directory != "" else "") + (name + ".bmp"))
     image.close()
-
-
-def impose_persistent_features(feature_histories, scale_factor, files, directory, name):
-    
-    if directory != "" and not os.path.isdir(directory):
-        os.mkdir(directory)
-        
-    # Drawing data
-    fnt = ImageFont.truetype("arial.ttf", 20)
-    dot_size = 5
-    
-    # Iterate over all files considered
-    for i, f in enumerate(files):
-        # Open the image for editing
-        image = Image.open(f)
-        d = ImageDraw.Draw(image)
-        
-        # Iterate over all feature points
-        for j in feature_histories:
-            r_s, c_s = feature_histories[j][i]
-            r = r_s * scale_factor
-            c = c_s * scale_factor  
-            
-            d.line([(c-dot_size, r-dot_size), (c+dot_size, r+dot_size)], width=2)
-            d.line([(c-dot_size, r+dot_size), (c+dot_size, r-dot_size)], width=2)
-            d.text((c - 4*dot_size, r - 4*dot_size), str(j), font=fnt)
-        
-        # Save the edited image to specified directory
-        image.save(((directory + "/") if directory != "" else "") + (name + str(i) + ".bmp"))
-        image.close()

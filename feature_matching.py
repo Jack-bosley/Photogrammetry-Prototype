@@ -8,55 +8,54 @@ Created on Sun Jul  5 14:51:49 2020
 import numpy as np
 import matplotlib.pyplot as plt
 
-def get_matches(feature_descriptors_prev, feature_descriptors_curr, threshold):
-    
-    print("find matches")
-    
-    # Keep track of indices of matching features and their separation
-    matches_1 = []
-    matches_2 = []
-    match_dist = []
-    
-    # Iterate over all features in set 1
-    for i_1, f_d_1_i in enumerate(feature_descriptors_prev):
+class Feature_dictionary:
+    def __init__(self, threshold):
+        self.descriptor_dictionary = {}
+        self.threshold = threshold
         
-        # Find the minimum nearest neighbour in set 2 and their separation
-        min_dist = np.inf
-        min_dist_index = -1
-        for i_2, f_d_2_i in enumerate(feature_descriptors_curr):
-            dist = np.sum(f_d_1_i != f_d_2_i)
-            if dist < min_dist:
-                min_dist = dist
-                min_dist_index = i_2
-         
-        # If the separation is sufficiently low
-        if min_dist < threshold:
-            
-            # Need to decide if this match should be added to list
-            to_add = True
-            
-            # Check that the nearest neighbour in set 2 is not a duplicate
-            for i_2, m_2 in enumerate(matches_2):
-                # If it is a duplicate, remove the existing match
-                #  if it is a worse fit than the current match
-                #  otherwise just don't add current match
-                if m_2 == min_dist_index:
-                    if match_dist[i_2] > min_dist:
-                        del matches_1[i_2]
-                        del matches_2[i_2]
-                        del match_dist[i_2]
-                        
-                        break
-                    else:
-                        to_add = False
-                        break
-            
-            # Add the current match to the list if it is unique or if it is the smallest
-            if to_add:
-                matches_1.append(i_1)
-                matches_2.append(min_dist_index)
-                match_dist.append(min_dist)
-        
+        print("new dictionary")
+
+
+    # Gets how different the two descriptors are
+    def descriptor_difference(self, d_1, d_2):
+        return np.sum(d_1 != d_2)
+
+
+    # Returns whether or not a match is made
+    def descriptors_match(self, d_1, d_2):
+        return self.descriptor_difference(d_1, d_2) < self.threshold
     
-    return matches_1, matches_2
+
+    # Returns the key of the descriptor in the dictionary (or -1 if not present)
+    def descriptor_index(self, descriptor):
+        
+        # Scan through dictionary
+        for d in self.descriptor_dictionary:
+            dict_descriptor = self.descriptor_dictionary[d]
+            # Return key if a match is made
+            if self.descriptors_match(dict_descriptor, descriptor):
+                return d
+            
+        return -1
+    
+    
+    # Appends supplied feature descriptors if not already in dictionary
+    def update_dictionary(self, feature_descriptors):      
+        # Iterate over all features in image
+        for f_d in feature_descriptors:
+            
+            # Get the index of the feature in the dictionary
+            index_in_dictionary = self.descriptor_index(f_d)
+            
+            # If it isn't present, add it to the end
+            if index_in_dictionary == -1:
+                index_in_dictionary = len(self.descriptor_dictionary)
+            
+                self.descriptor_dictionary[index_in_dictionary] = f_d
+                
+    
+    
+    def __str__(self):
+        return "Descriptor dictionary object -- length %d " % len(self.descriptor_dictionary)
+        
     
