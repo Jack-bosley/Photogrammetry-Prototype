@@ -10,8 +10,6 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from scipy import signal
 import scipy.ndimage.filters as filters
-from scipy.optimize import minimize
-from scipy.spatial import KDTree
 import time
 
 # Sobel kernels
@@ -42,16 +40,21 @@ d_dxy = np.array([[ -1, -2,  0,  2,  1],
                   [  2,  4,  0, -4, -2],
                   [  1,  2,  0, -2,  1]])
 
+
 # laplace
 l_xy = np.array([[ -1, -1, -1],
                  [ -1,  8, -1],
                  [ -1, -1, -1]])
 
+
+
 # Finding common features
 #------------------------------------------------------------------------------
-def get_corners_fast(image, plot_Harris_response = False):
+def get_corners_fast(image, plot_Harris_response = False, dist_to_edge_threshold = -1):
     d = 8
     k = 0.04
+    if dist_to_edge_threshold == -1:
+        dist_to_edge_threshold = d 
         
     # Contruct the aperture to convolve with the gradients for the structure tensor
     aperture = np.outer(signal.gaussian(d, d/2), signal.gaussian(d, d/2))
@@ -104,8 +107,8 @@ def get_corners_fast(image, plot_Harris_response = False):
                                      r_max - rows[i], 
                                      c_max - cols[i]]) \
                              for i in range(len(rows))])
-    rows = rows[np.where(dist_to_edge > d)]
-    cols = cols[np.where(dist_to_edge > d)]
+    rows = rows[np.where(dist_to_edge > dist_to_edge_threshold)]
+    cols = cols[np.where(dist_to_edge > dist_to_edge_threshold)]
 
 
     # Plot the harris response graph if desired
@@ -117,95 +120,6 @@ def get_corners_fast(image, plot_Harris_response = False):
     
     # Return best points
     return list(zip(rows, cols))
-
-
-
-# Guess which features correspond to the same point in 3d space
-#------------------------------------------------------------------------------
-def match_features(features_prev, features_curr):
-    
-    threshold_distance = 10
-    threshold_ratio = 0.4
-    
-    # Construct a KD tree with the current image's feature points
-    T1 = KDTree(features_curr)
-    
-    # Find the closest 2 points in current to the points in prev
-    paired_distances, paired_current = T1.query(features_prev, 2)
-    paired_curr_closest = list(zip(*paired_current))[0]
-    neighbour_distance_ratio = np.array([p_d[0] / p_d[1] for p_d in paired_distances])
-    neighbour_distance = np.array([p_d[0] for p_d in paired_distances])
-    
-    # Cull all pairs with neighbour distance ratios greater than threshold_ratio
-    #  and greater separation than threshold_distance
-    pairs = [(i, j) for i, j in enumerate(paired_curr_closest)]
-    valid_pairs = list(np.where((neighbour_distance_ratio < threshold_ratio) & 
-                                (neighbour_distance < threshold_distance))[0])
-    pairs = [pairs[i] for i in valid_pairs]
-    confidences = [1/((neighbour_distance_ratio[i] * neighbour_distance[i]) + 0.01) \
-                   for i in valid_pairs] 
-    
-    # Sort by confidence
-    confidences, pairs = zip(*reversed(sorted(zip(confidences, pairs))))
-    confidences = list(confidences)
-    pairs = list(pairs)
-    
-    # Delete duplicates with lowest confidence
-    pairs_prev, pairs_curr = zip(*pairs)
-    dupes = [i for i,x in enumerate(pairs_curr) if pairs_curr.count(x) > 1]
-    best_options = []
-    deleted = 0
-    for d in dupes:
-        if pairs_curr[d] not in best_options:
-            best_options.append(pairs_curr[d])
-        else:
-            del confidences[d - deleted]
-            del pairs[d - deleted]
-            deleted += 1
-
-    return confidences, pairs
-
-
-# Maintain the dictionary of features
-#------------------------------------------------------------------------------
-def initialise_feature_dictionary(feature_histories, feature_weights, 
-                                  features_prev, features_curr):
-    
-    # Attempt to match features between first and second set
-    confidences, pairs = match_features(features_prev, features_curr)
-
-    # Add all pairs to the dictionary
-    for i, data in enumerate(zip(confidences, pairs)):
-        c, p = data
-        p1, p2 = p
-        
-        feature_weights[i] = c
-        feature_histories[i] = [features_prev[p1], features_curr[p2]]
-        
-
-
-def update_feature_dictionary(feature_histories, feature_weights,
-                              features_prev, features_curr):
-    
-    # Get the coordinates of features in the dictionary from prev frame
-    prev_matched_features = \
-        list(list(zip(*list(feature_histories.values())))[-1])
-    
-    # Attempt to match features between current and dictionary
-    confidences, pairs = match_features(features_curr, prev_matched_features)
-        
-    print(pairs)
-    
-
-    
-
-
-
-
-
-
-
-
 
 
 

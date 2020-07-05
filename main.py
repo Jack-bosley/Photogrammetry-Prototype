@@ -10,9 +10,9 @@ import numpy as np
 import time
 from PIL import Image
 
-from feature_detection import get_corners_fast, \
-    initialise_feature_dictionary, update_feature_dictionary
+from feature_detection import get_corners_fast
 from debugging import impose_features, impose_persistent_features
+from feature_classifier import BRIEF_classifier
 
 def get_images(directory, name):
     
@@ -34,16 +34,14 @@ def get_images(directory, name):
 
 def main():  
     directory = "Video2"
-    stop_after = 1
+    stop_after = 2
     
     # Get all files in order
     numbers, files = get_images(directory, "frame")
     
+    # Generate a BRIEF classifier
+    brief = BRIEF_classifier(128, 25)
     
-    feature_histories = {}
-    feature_weights = {}
-    
-    features_prev = ""
     
     # Iterate through files
     scale_factor = 2
@@ -57,23 +55,15 @@ def main():
                                               image.height // scale_factor)).convert("L"), 
                                 dtype=np.int16)
                 
-        # Get the locations of the features
-        features = get_corners_fast(image_scaled, False)  
+        # Get the locations and descriptors of the features
+        feature_locations = get_corners_fast(image_scaled, False, 25)
+        feature_descriptors = brief(image_scaled, feature_locations)
         
-        # If multiple images have been scanned for features, attempt to match them
-        if i == 1:
-            initialise_feature_dictionary(feature_histories, feature_weights, 
-                                          features_prev, features)
-        elif i > 1:
-            update_feature_dictionary(feature_histories, feature_weights, 
-                                      features_prev, features)
-            
-            #break
+        #print(feature_descriptors)
+        
+        
+        
+        
 
-        # Store previous features
-        features_prev = features
-        
-    impose_persistent_features(feature_histories, scale_factor, files[:(stop_after+1)], directory + "/Imposed", "Corner")
-    
 if __name__ == '__main__':
     main()
