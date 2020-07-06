@@ -59,17 +59,18 @@ def get_corners_fast(image, plot_Harris_response = False, dist_to_edge_threshold
     # Contruct the aperture to convolve with the gradients for the structure tensor
     aperture = np.outer(signal.gaussian(d, d/2), signal.gaussian(d, d/2))
 
+#    t0 = time.time()
 
-    # Get image gradients
-    I_dx = signal.fftconvolve(image, d_dx, mode='same')
-    I_dy = signal.fftconvolve(image, d_dy, mode='same')
-    
-    
+    # Get image gradients (small kernels prefer convolve2d)
+    I_dx = signal.convolve2d(image, d_dx, mode='same')
+    I_dy = signal.convolve2d(image, d_dy, mode='same')
+      
     # Compute squares of gradients 
     I_xx = np.square(I_dx)
     I_yy = np.square(I_dy)
     I_xy = np.multiply(I_dx, I_dy)
     
+#    t1 = time.time()
 
     # Structure tensor elements can be found by convolving
     #  squared gradients with aperture function
@@ -77,6 +78,7 @@ def get_corners_fast(image, plot_Harris_response = False, dist_to_edge_threshold
     A_12 = signal.fftconvolve(I_xy, aperture, mode='same')
     A_22 = signal.fftconvolve(I_yy, aperture, mode='same')
     
+#    t2 = time.time()
 
     # Compute harris response
     detM = np.multiply(A_11, A_22) - np.square(A_12)
@@ -90,15 +92,17 @@ def get_corners_fast(image, plot_Harris_response = False, dist_to_edge_threshold
     max_values = filters.maximum_filter(M, d)
     rows, cols = np.where(M == max_values)
     
+#    t3 = time.time()
     
     # Find intensity of peaks
     #  and filter low intensity points
-    M_intensity = signal.fftconvolve(M, l_xy, mode='same')
+    M_intensity = signal.convolve2d(M, l_xy, mode='same')
     avg = np.average(M_intensity)
     high_contrast_points = np.where(M_intensity[rows, cols] > 2*avg)
     rows = [rows[i] for i in high_contrast_points][0]
     cols = [cols[i] for i in high_contrast_points][0]
 
+#    t4 = time.time()
 
     # Filter out points on the edge
     r_max, c_max = np.shape(image)
@@ -110,6 +114,13 @@ def get_corners_fast(image, plot_Harris_response = False, dist_to_edge_threshold
     rows = rows[np.where(dist_to_edge - 1 > dist_to_edge_threshold)]
     cols = cols[np.where(dist_to_edge - 1 > dist_to_edge_threshold)]
 
+#    t5 = time.time()
+#
+#    print("Image Gradients " + str(t1 - t0),
+#          "\nConvolutions" + str(t2 - t1),
+#          "\nHarris Response" + str(t3 - t2),
+#          "\nFilter by laplace" + str(t4 - t3),
+#          "\nFilter edge points" + str(t5 - t4) + "\n")
 
     # Plot the harris response graph if desired
     if plot_Harris_response:

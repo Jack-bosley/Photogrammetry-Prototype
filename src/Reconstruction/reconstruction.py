@@ -9,3 +9,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
+class Bundle_adjuster:
+    
+    def __init__(self):
+        

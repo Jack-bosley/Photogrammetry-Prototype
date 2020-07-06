@@ -5,40 +5,24 @@ Created on Wed Jul  1 16:55:51 2020
 @author: Jack
 """
 
+
 import os
 import numpy as np
 import time
 from PIL import Image
 
-from feature_detection import get_corners_fast
-from feature_classifier import BRIEF_classifier
-from feature_matching import Feature_dictionary
-from debugging import impose_features
+from FeatureExtraction.feature_detection import get_corners_fast
+from FeatureExtraction.feature_classifier import BRIEF_classifier
+from FeatureExtraction.feature_matching import Feature_dictionary
+from Utilities.debugging import impose_features
 
-def get_images(directory, name):
-    
-    # Find all pictures containing name in directory
-    files = os.listdir(directory)
-    numbers = []
-    for f in files:
-        if name not in f:
-            files.remove(f)
-        else:
-            numbers.append(int(f.split(name)[1].split('.')[0]))
-    
-    # Modify files to contain full path
-    files = [directory + "/" + f for f in files]
-    
-    # Order by number in name and return 
-    return zip(*sorted(zip(numbers, files)))
-    
 
-def main():  
-    directory = "Video1"
-    stop_after = 1000
+def main(data_directory, file_base_name):  
+    directory = data_directory
+    stop_after = 20
     
     # Get all files in order
-    numbers, files = get_images(directory, "frame")
+    numbers, files = get_images(directory, file_base_name)
     
     
     # Generate a BRIEF classifier
@@ -89,14 +73,32 @@ def main():
         locs.append(feature_locations)
         descs.append(feature_descriptors)
     
-    print("\nLocate corners \t" + str(np.mean(T_loc)),
+    print("\nLocate corners \t\t" + str(np.mean(T_loc)),
           "\nDescriptors of corners \t" + str(np.mean(T_dec)), 
-          "\nMatch descriptors \t" + str(np.mean(T_mat)) + "\n") 
+          "\nMatch descriptors \t" + str(np.mean(T_mat)),
+          "\nTotal\t\t\t" + str(np.sum([np.mean(T_loc), np.mean(T_dec), np.mean(T_mat)])) + "\n") 
     
     for i in range(stop_after):
         impose_features(feature_dict, locs[i], descs[i], Image.open(files[i]),
                         scale_factor, directory+"/Imposed1", "Corner"+str(i))
     
 
+def get_images(directory, name):
+    
+    # Find all pictures containing name in directory
+    files = os.listdir(directory)
+    numbers = []
+    for f in files:
+        if name not in f:
+            files.remove(f)
+        else:
+            numbers.append(int(f.split(name)[1].split('.')[0]))
+    
+    # Modify files to contain full path
+    files = [directory + "/" + f for f in files]
+    
+    # Order by number in name and return 
+    return zip(*sorted(zip(numbers, files)))
+
 if __name__ == '__main__':
-    main()
+    main("Data/Video1", "frame")

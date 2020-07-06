@@ -51,7 +51,6 @@ class Feature_dictionary:
         
     def update_dictionary(self, features):
         
-        t0 = time.time()
         # If already know about some features
         if len(self.all_features) > 0:
             
@@ -73,7 +72,6 @@ class Feature_dictionary:
         else:
             self.all_features = features
         
-        print("update time = %f "% (time.time() - t0))
         
         
     def get_matches(self, features, k=2):

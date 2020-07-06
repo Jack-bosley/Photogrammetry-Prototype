@@ -8,7 +8,7 @@ Created on Sat Jul  4 13:39:31 2020
 import os
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-from feature_matching import Feature_dictionary
+from FeatureExtraction.feature_matching import Feature_dictionary
 
 def impose_features(feature_dictionary, feature_points, feature_descriptors, 
                     image, scale_factor = 1, directory = "", name="Corners"):
