@@ -14,29 +14,29 @@ from PIL import Image
 from FeatureExtraction.feature_detection import get_corners_fast
 from FeatureExtraction.feature_classifier import BRIEF_classifier
 from FeatureExtraction.feature_matching import Feature_dictionary
+
+from Reconstruction.reconstruction import Bundle_adjuster
+
 from Utilities.debugging import impose_features
 
 
 def main(data_directory, file_base_name):  
-    directory = data_directory
-    stop_after = 20
+    
+    # For debugging
+    stop_after = 5
+    
     
     # Get all files in order
-    numbers, files = get_images(directory, file_base_name)
+    numbers, files = get_images(data_directory, file_base_name)
     
     
     # Generate a BRIEF classifier
-    brief = BRIEF_classifier(128, 25)
-    
+    brief = BRIEF_classifier(128, 25)  
     # Also keep track of all feature descriptors for matching against
     feature_dict = Feature_dictionary()
+    # Also create an object for reconstructing the scene
+    reconstructor = Bundle_adjuster()
     
-    
-    locs, descs = [], []
-    
-    T_loc = []
-    T_dec = []
-    T_mat = []
     
     # Iterate through files
     scale_factor = 2
@@ -51,36 +51,14 @@ def main(data_directory, file_base_name):
                                 dtype=np.int16)
     
     
-        t_0 = time.time()
         # Get the locations and descriptors of the features
         feature_locations = get_corners_fast(image_scaled, False, brief.S)
-        
-        t_1 = time.time()
-        
         feature_descriptors = brief(image_scaled, feature_locations)
         
-        t_2 = time.time()
-        
+        # Update the dictionary with newly spotted features
         feature_dict.update_dictionary(feature_descriptors)
         
-        t_3 = time.time()
-        
-        T_loc.append(t_1 - t_0)
-        T_dec.append(t_2 - t_1)
-        T_mat.append(t_3 - t_2)
-       
-        
-        locs.append(feature_locations)
-        descs.append(feature_descriptors)
-    
-    print("\nLocate corners \t\t" + str(np.mean(T_loc)),
-          "\nDescriptors of corners \t" + str(np.mean(T_dec)), 
-          "\nMatch descriptors \t" + str(np.mean(T_mat)),
-          "\nTotal\t\t\t" + str(np.sum([np.mean(T_loc), np.mean(T_dec), np.mean(T_mat)])) + "\n") 
-    
-    for i in range(stop_after):
-        impose_features(feature_dict, locs[i], descs[i], Image.open(files[i]),
-                        scale_factor, directory+"/Imposed1", "Corner"+str(i))
+
     
 
 def get_images(directory, name):

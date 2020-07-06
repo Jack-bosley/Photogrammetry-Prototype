@@ -1,6 +1,5 @@
 # Don't bother backing up the video folders
 src/Data/
-src/Data/
 
 # Ignore pdfs
 Reading/
