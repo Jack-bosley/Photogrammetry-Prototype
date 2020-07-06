@@ -6,6 +6,7 @@ Created on Sat Jul  4 13:39:31 2020
 """
 
 import os
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from feature_matching import Feature_dictionary
 
@@ -16,6 +17,9 @@ def impose_features(feature_dictionary, feature_points, feature_descriptors,
     if directory != "" and not os.path.isdir(directory):
         os.mkdir(directory)
 
+
+    # Get feature indices in dictionary
+    feature_numbers = feature_dictionary.descriptor_indices_in_dictionary(feature_descriptors)
 
     # Set up image for drawing
     d = ImageDraw.Draw(image)
@@ -31,13 +35,10 @@ def impose_features(feature_dictionary, feature_points, feature_descriptors,
         c = c_s * scale_factor        
         
         
-        # Get feature index in dictionary
-        feature_number = feature_dictionary.descriptor_index(feature_descriptors[i])
-        
         # Draw feature on picture
         d.line([(c-dot_size, r-dot_size), (c+dot_size, r+dot_size)], width=1)
         d.line([(c-dot_size, r+dot_size), (c+dot_size, r-dot_size)], width=1)        
-        d.text((c, r + 10), str(feature_number), font=fnt)
+        d.text((c, r + 10), str(feature_numbers[i]), font=fnt)
     
     image.save(((directory + "/") if directory != "" else "") + (name + ".bmp"))
     image.close()

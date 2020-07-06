@@ -35,13 +35,24 @@ def get_images(directory, name):
 
 def main():  
     directory = "Video1"
-    stop_after = 1
+    stop_after = 1000
     
     # Get all files in order
     numbers, files = get_images(directory, "frame")
     
+    
     # Generate a BRIEF classifier
     brief = BRIEF_classifier(128, 25)
+    
+    # Also keep track of all feature descriptors for matching against
+    feature_dict = Feature_dictionary()
+    
+    
+    locs, descs = [], []
+    
+    T_loc = []
+    T_dec = []
+    T_mat = []
     
     # Iterate through files
     scale_factor = 2
@@ -54,12 +65,38 @@ def main():
         image_scaled = np.array(image.resize((image.width // scale_factor, 
                                               image.height // scale_factor)).convert("L"), 
                                 dtype=np.int16)
-                
+    
+    
+        t_0 = time.time()
         # Get the locations and descriptors of the features
         feature_locations = get_corners_fast(image_scaled, False, brief.S)
+        
+        t_1 = time.time()
+        
         feature_descriptors = brief(image_scaled, feature_locations)
-
-        print(feature_descriptors)
+        
+        t_2 = time.time()
+        
+        feature_dict.update_dictionary(feature_descriptors)
+        
+        t_3 = time.time()
+        
+        T_loc.append(t_1 - t_0)
+        T_dec.append(t_2 - t_1)
+        T_mat.append(t_3 - t_2)
+       
+        
+        locs.append(feature_locations)
+        descs.append(feature_descriptors)
+    
+    print("\nLocate corners \t" + str(np.mean(T_loc)),
+          "\nDescriptors of corners \t" + str(np.mean(T_dec)), 
+          "\nMatch descriptors \t" + str(np.mean(T_mat)) + "\n") 
+    
+    for i in range(stop_after):
+        impose_features(feature_dict, locs[i], descs[i], Image.open(files[i]),
+                        scale_factor, directory+"/Imposed1", "Corner"+str(i))
+    
 
 if __name__ == '__main__':
     main()

@@ -40,7 +40,7 @@ class BRIEF_classifier:
             
         # Compare pixel values according to test locations
         descriptor = [np.packbits(image_smoothed[fx + self.X1, fy + self.Y1] >
-                                  image_smoothed[fx + self.X2, fy + self.Y2]).view(np.float32) for (fx, fy) in features]
-    
+                                  image_smoothed[fx + self.X2, fy + self.Y2]).view(np.uint8) for (fx, fy) in features]
+
         # Return the description of the feature points
-        return descriptor
+        return np.array(descriptor)

@@ -7,55 +7,76 @@ Created on Sun Jul  5 14:51:49 2020
 
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2
+import time
 
 class Feature_dictionary:
-    def __init__(self, threshold):
-        self.descriptor_dictionary = {}
-        self.threshold = threshold
+    
+    def __init__(self):
         
-        print("new dictionary")
-
-
-    # Gets how different the two descriptors are
-    def descriptor_difference(self, d_1, d_2):
-        return np.sum(d_1 != d_2)
-
-
-    # Returns whether or not a match is made
-    def descriptors_match(self, d_1, d_2):
-        return self.descriptor_difference(d_1, d_2) < self.threshold
-    
-
-    # Returns the key of the descriptor in the dictionary (or -1 if not present)
-    def descriptor_index(self, descriptor):
+        # Set up FLANN matcher for Local Sensitivity Hashing mode (Needed for Hamming)
+        FLANN_INDEX_LSH = 6
+        index_params= dict(algorithm = FLANN_INDEX_LSH,
+                           table_number = 6, # 12
+                           key_size = 12,     # 20
+                           multi_probe_level = 1) #2
         
-        # Scan through dictionary
-        for d in self.descriptor_dictionary:
-            dict_descriptor = self.descriptor_dictionary[d]
-            # Return key if a match is made
-            if self.descriptors_match(dict_descriptor, descriptor):
-                return d
-            
-        return -1
+        search_params = dict(checks = 50)
+        
+        # Create the flann matcher
+        self.flann = cv2.FlannBasedMatcher(index_params, search_params)
+        
+        # Store all feature descriptors
+        self.all_features = np.array([])
+        
     
-    
-    # Appends supplied feature descriptors if not already in dictionary
-    def update_dictionary(self, feature_descriptors):      
-        # Iterate over all features in image
-        for f_d in feature_descriptors:
+    def descriptor_indices_in_dictionary(self, descriptor):
+        matches = self.get_matches(descriptor)
+        
+        indices = []
+        # Check all matches
+        for m_2 in matches:
             
-            # Get the index of the feature in the dictionary
-            index_in_dictionary = self.descriptor_index(f_d)
-            
-            # If it isn't present, add it to the end
-            if index_in_dictionary == -1:
-                index_in_dictionary = len(self.descriptor_dictionary)
-            
-                self.descriptor_dictionary[index_in_dictionary] = f_d
+            if len(m_2) == 2:
                 
-    
-    
-    def __str__(self):
-        return "Descriptor dictionary object -- length %d " % len(self.descriptor_dictionary)
+                # Append indices of good matches or -1 if not a good match
+                m, n = m_2
+                indices.append(m.trainIdx if m.distance < 0.7*n.distance else -1)
+            
+            # Also append -1 if no match found
+            else:
+                indices.append(-1)
+                
+        return indices
         
+    def update_dictionary(self, features):
+        
+        t0 = time.time()
+        # If already know about some features
+        if len(self.all_features) > 0:
+            
+            # Match new features against old ones
+            matches = self.get_matches(features)
+            
+            # Check all matches
+            for m_2 in matches:
+                
+                # Ignore invalid matches
+                if len(m_2) == 2:
+                    
+                    # If not a good match, assume it is a new descriptor and keep track of it
+                    m, n = m_2
+                    if m.distance > 0.9*n.distance:
+                        self.all_features = np.vstack([self.all_features, features[m.queryIdx]])
+        
+        # Otherwise all features are new, so add all to array of descriptors
+        else:
+            self.all_features = features
+        
+        print("update time = %f "% (time.time() - t0))
+        
+        
+    def get_matches(self, features, k=2):
+        # k nearest neighbours (query, train, k)
+        return self.flann.knnMatch(features, self.all_features, k=k)
     

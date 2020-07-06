@@ -92,7 +92,7 @@ def get_corners_fast(image, plot_Harris_response = False, dist_to_edge_threshold
     
     
     # Find intensity of peaks
-    #  and ilter low intensity points
+    #  and filter low intensity points
     M_intensity = signal.fftconvolve(M, l_xy, mode='same')
     avg = np.average(M_intensity)
     high_contrast_points = np.where(M_intensity[rows, cols] > 2*avg)
@@ -107,8 +107,8 @@ def get_corners_fast(image, plot_Harris_response = False, dist_to_edge_threshold
                                      r_max - rows[i], 
                                      c_max - cols[i]]) \
                              for i in range(len(rows))])
-    rows = rows[np.where(dist_to_edge > dist_to_edge_threshold)]
-    cols = cols[np.where(dist_to_edge > dist_to_edge_threshold)]
+    rows = rows[np.where(dist_to_edge - 1 > dist_to_edge_threshold)]
+    cols = cols[np.where(dist_to_edge - 1 > dist_to_edge_threshold)]
 
 
     # Plot the harris response graph if desired
@@ -119,7 +119,7 @@ def get_corners_fast(image, plot_Harris_response = False, dist_to_edge_threshold
         plt.show()
     
     # Return best points
-    return list(zip(rows, cols))
+    return np.array(list(zip(rows, cols)))
 
 
 
