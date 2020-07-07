@@ -7,45 +7,32 @@ Created on Sat Jul  4 13:24:47 2020
 
 import numpy as np
 from matplotlib import pyplot as plt
+from scipy import optimize
 
+from camera_model import Camera
 
 class Bundle_adjuster:
-    
-    # Camera roll from euler angles
-    @staticmethod
-    def __get_R_camera(roll, yaw, pitch):
-        # yaw
-        cy = np.cos(roll)
-        sy = np.sin(roll)
-        
-        # pitch
-        cp = np.cos(yaw)
-        sp = np.sin(yaw)
-        
-        # roll
-        cr = np.cos(pitch)
-        sr = np.sin(pitch)
-    
-        return np.array([[cy*cp, (cy*sp*sr) - (sy*cr), (cy*sp*cr) + (sy*sr)], 
-                         [sy*cp, (sy*sp*sr) + (cy*cr), (sy*sp*cr) - (cy*sr)], 
-                         [  -sp,                cp*sr,                cp*cr]])   
     
     def __init__(self):
         print("init bundle adjuster")
 
     
     # Reproject coordinates from world space to pixel space subject to
-    #  X world coordinates
-    #  (T, K) camera properties
-    #  (w, h) image size
-    def reproject(self, X, T, K, w, h, plot_reprojection = False):
+    #  X point world coordinates
+    #  T extrinsic camera properties
+    #  C camera model
+    def reproject(self, X, T, C : Camera, plot_reprojection = False):
         
-        # Get camera properties
-        R_camera = Bundle_adjuster.__get_R_camera(T[0], T[1], T[2])
-        T_camera = np.array([T[3], T[4], T[5]])       
-        f_x, f_y, k1, k2, k3, p1, p2 = K
+        # Get camera properties for each frame
+        R_camera = Camera.rotation_matrix(T[0], T[1], T[2])
+        T_camera = np.array([T[3], T[4], T[5]])
+        f_x, f_y = C.focal_lengths()
+        k1, k2, k3 = C.radial_distortion_coefficients()
+        p1, p2 = C.tangential_distortion_coefficients()
+        w, h = C.image_resolution()
         
-        # Translate into camera reference frame
+        
+        # Translate into camera reference frames
         X_camera = [np.matmul(R_camera, np.subtract(x, T_camera)) for x in X]
         #  Cull points too near the camera
         X_camera = [x for x in X_camera if x[2] > 0.01]
@@ -75,8 +62,7 @@ class Bundle_adjuster:
             
             
         # Project into pixel plane
-        w_half, h_half = w/2, h/2
-        p_image = [np.array([w*u_x + w_half,h*u_y + h_half]) for (u_x, u_y) in u_norm_camera]
+        p_image = [np.array([w * (u_x + 0.5),h * (u_y + 0.5)]) for (u_x, u_y) in u_norm_camera]
         
         if plot_reprojection:
             # Plot points for debugging purposes
@@ -85,59 +71,72 @@ class Bundle_adjuster:
             plt.axis('equal')
             plt.xlim(0, w)
             plt.ylim(0, h)
+            plt.show()
 
         
         return p_image
-
-
-    # Error in reprojection subject to 
-    #  P pixel coords
-    #  X world coordinates
-    #  (T, K) camera properties
-    #  (w, h) image size
-    def reprojection_error(self, P, X, T, K, w, h):
-        residules = np.subtract(P, self.reproject(X, T, K, w, h))
-        residules_sq = np.sum(np.square(residules), axis=1)
-        print(residules_sq)
     
     
-    def corrections(self, P, X, T, K, w, h):
-        # Compute derivation matrices
-        print("hello")
+#
+#
+#    # Error in reprojection subject to 
+#    #  P pixel coords
+#    #  X world coordinates
+#    #  (T, K) camera properties
+#    #  (w, h) image size
+#    def reprojection_errors(self, P, X, T, C):
+#        P_reprojected = [self.reproject(X, T_j, C) for T_j in T]
+#        residules = np.subtract(P, P_reprojected)
+#        
+#        x_res, y_res = np.dsplit(residules,2)
+#  
+#        # Returns MxN array for M cameras and N points
+#        new_shape = (len(T), len(X))
+#        return np.reshape(x_res, new_shape), np.reshape(y_res, new_shape)
+#    
+#    
+#    def corrections(self, P, X, T, C):
+#        # Compute derivatives
+#        x_err, y_err = self.reprojection_errors(P, X, T, C)
+#        
+#        optimize.minimize()
+#        
+#        print(x_err)
+#        
         
     
 
 def main():
     ba = Bundle_adjuster()
+    C = Camera(9/16, 1, 0, 0, 0, 0, 0, 1280, 720)
     
-    X = [np.array([1,0,2]).T,
-         np.array([0,1,2]).T,
-         np.array([0,0,3]).T,
-         np.array([1,1,4]).T]
+    number_of_points = 4
+    number_of_cameras = 5
+    
+    # Use solutions and reprojection to set a dummy problem
+    _X = [np.array([1,0,2]).T,
+          np.array([0,1,2]).T,
+          np.array([0,0,3]).T,
+          np.array([1,1,4]).T]
+    
+    _T_camera = [[0,     0, 0, 0.0, 0, 0],
+                 [0,  -0.1, 0, 0.2, 0, 0],
+                 [0, -0.15, 0, 0.4, 0, 0],
+                 [0, -0.25, 0, 0.6, 0, 0],
+                 [0,  -0.3, 0, 0.8, 0, 0]]
+    
+    ba.reproject(_X, _T_camera[0], C, True)
     
     
-#    P = [np.array([990, 370]).T,
-#         np.array([650, 715]).T,
-#         np.array([635, 370]).T,
-#         np.array([825, 530]).T]
 #    
-    
-    # Camera extrinsic parameters       
-    #  (roll, yaw, pitch, x, y, z)
-    T_camera = np.array([[0, 0, 0, 0.0, 0, 0],
-                         [0, 0, 0, 0.2, 0, 0],
-                         [0, 0, 0, 0.4, 0, 0],
-                         [0, 0, 0, 0.6, 0, 0],
-                         [0, 0, 0, 0.8, 0, 0]])
-    T_camera_1 = T_camera[0]
-    
-    # Camera intrinsic parameters
-    #  (focal (x, y), radial distortion (2, 4, 6), tangential distortion (x, y))
-    K_camera = np.array([9/16, 1, 0, 0, 0, 0, 0])
-
-    #ba.reprojection_error(P, X, T_camera, K_camera, 1280, 720)
-    
-    print(ba.reproject(X, T_camera_1, K_camera, 1280, 720, True))
+#    # Attempt to recover _X, _T, _K without knowing them from P
+#    P = [ba.reproject(_X, _T_camera, C) for _T_camera in _T_camera]
+#
+#    X_guess = [np.array([0, 0, 1]).T for i in range(number_of_points)]
+#    T_camera_guess = [[0, 0, 0, 0, 0, 0] for i in range(number_of_cameras)]
+#    
+#    ba.corrections(P, X_guess, T_camera_guess, C)
+#    
     
     
 if __name__ == '__main__':
