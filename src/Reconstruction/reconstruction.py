@@ -77,32 +77,32 @@ class Bundle_adjuster:
         return p_image
     
     
-#
-#
-#    # Error in reprojection subject to 
-#    #  P pixel coords
-#    #  X world coordinates
-#    #  (T, K) camera properties
-#    #  (w, h) image size
-#    def reprojection_errors(self, P, X, T, C):
-#        P_reprojected = [self.reproject(X, T_j, C) for T_j in T]
-#        residules = np.subtract(P, P_reprojected)
-#        
-#        x_res, y_res = np.dsplit(residules,2)
-#  
-#        # Returns MxN array for M cameras and N points
-#        new_shape = (len(T), len(X))
-#        return np.reshape(x_res, new_shape), np.reshape(y_res, new_shape)
-#    
-#    
-#    def corrections(self, P, X, T, C):
-#        # Compute derivatives
-#        x_err, y_err = self.reprojection_errors(P, X, T, C)
-#        
-#        optimize.minimize()
-#        
-#        print(x_err)
-#        
+
+
+    # Error in reprojection subject to 
+    #  P pixel coords
+    #  X world coordinates
+    #  (T, K) camera properties
+    #  (w, h) image size
+    def reprojection_errors(self, P, X, T, C):
+        P_reprojected = [self.reproject(X, T_j, C) for T_j in T]
+        residules = np.subtract(P, P_reprojected)
+        
+        x_res, y_res = np.dsplit(residules,2)
+  
+        # Returns MxN array for M cameras and N points
+        new_shape = (len(T), len(X))
+        return np.reshape(x_res, new_shape), np.reshape(y_res, new_shape)
+    
+    
+    def corrections(self, P, X, T, C):
+        # Compute derivatives
+        x_err, y_err = self.reprojection_errors(P, X, T, C)
+        
+        optimize.minimize()
+        
+        print(x_err)
+        
         
     
 
