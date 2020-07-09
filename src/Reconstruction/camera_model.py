@@ -5,7 +5,7 @@ Created on Tue Jul  7 19:34:35 2020
 @author: Jack
 """
 
-import autograd.numpy as np
+import numpy as np
 import matplotlib.pyplot as plt
 
 # Class containing pre-calibrated camera information and camera specific methods
@@ -170,7 +170,6 @@ class Camera:
         u_r_corr = ((self.k1 * r_sq) + (self.k2 * np.power(r_sq, 2)) + (self.k3 * np.power(r_sq, 3)))
         
         
-
         
         # Compute the derivatives with respect to the point position
         U_X = dU_dX(X_c_prime)
