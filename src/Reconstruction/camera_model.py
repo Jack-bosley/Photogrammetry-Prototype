@@ -85,6 +85,36 @@ class Camera:
             
         return reprojection
     
+    def compare_reprojections(self, X_1, X_2, T_1, T_2, number_to_show=-1):
+        reprojection_1 = np.array([[self.project(X, T) for X in X_1] for T in T_1])
+        reprojection_2 = np.array([[self.project(X, T) for X in X_2] for T in T_2])
+        
+        count = len(reprojection_1)
+        I = 0
+        to_show = []
+        for i in range(count):
+            if number_to_show == -1:
+                to_show.append(i)
+            else:
+                _I = int(i * number_to_show / count)
+                if _I > I:
+                    to_show.append(i)
+                    I = _I
+        
+        # Plot points
+        for i in to_show:
+            p_1, p_2 = reprojection_1[i], reprojection_2[i]
+            p_x_1, p_y_1 = zip(*p_1)
+            p_x_2, p_y_2 = zip(*p_2)
+            
+            plt.scatter(p_x_1, p_y_1)
+            plt.scatter(p_x_2, p_y_2, marker='x')
+            plt.axis('equal')
+            plt.xlim(0, self.w)
+            plt.ylim(0, self.h)
+            plt.legend(["points 1", "points 2"])
+            plt.show()
+    
     # Getters for grouped variables
     def focal_lengths(self):
         return self.f_x, self.f_y
