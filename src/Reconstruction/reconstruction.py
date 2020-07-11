@@ -35,8 +35,7 @@ class Bundle_adjuster:
         
         for i in range(num_steps):
             dp, dc = self.corrections(damping)
-            
-                        
+        
             self.update_guess(dp, dc)
             
             if c0 > self.cost():
@@ -63,7 +62,7 @@ class Bundle_adjuster:
         return np.sum(np.square(self.robustifier(np.subtract(self.P, P_guess))))
 
 
-    def robustifier(self, x, sigma=0.1):
+    def robustifier(self, x, sigma=0.3):
         return np.log(np.add(1, np.divide(np.square(np.divide(x, sigma)), 2)))
 
     def corrections(self, damping):
@@ -92,7 +91,7 @@ class Bundle_adjuster:
 
                 # Get the error vector
                 r[j][i] = self.P[j, i] - self.C.project(_X, _T)
-                dx, dy = self.P[j, i] - self.C.project(_X, _T)
+                dx, dy = r[j][i]
                 r_robust[j][i] = self.robustifier(np.sqrt(dx**2 + dy**2))
                 
                 # Compute and store the jacobian in A and B
@@ -159,51 +158,44 @@ class Bundle_adjuster:
             string += ("Rotation (%.1f, %.1f, %.1f),\tPosition(%.1f, %.1f, %.1f)\n" % (_t[0], _t[1], _t[2], _t[3], _t[4], _t[5]))
         return string
 
-def main():
+
+
+def run_test():
     C = Camera(9/16, 1, 0, 0, 0, 0, 0, 1280, 720)
 
     _X = []
-    _T_camera = []
+    _T = []
+    
+    # Supplied guess (irl maybe from accelerometer)
+    _T_guess = []
+    # Error in camera position values
+    da, dp = 0.3, 2 
     
     n_points = 10
     for i in range(n_points):
         x = np.random.uniform(-4, 4)
         y = np.random.uniform(-4, 4)
-        z = np.random.uniform(8, 12)
+        z = np.random.uniform(15, 25)
         _X.append(np.array([x, y, z]))
     
-    n_cameras = 16
+    n_cameras = 60
     for i in range(n_cameras):
-        theta = np.pi * (i / float(n_cameras-1))
-        _T_camera.append([0, -theta, 0, -10 * np.sin(theta), 0, 10 * (1 - np.cos(theta))])
-    
-    # Attempt to recover _X, _T, _K without knowing them, from P
-    P = C.reproject_all(_X, _T_camera, False)
-    
-    print("Camera position error")
-    da, dp = 0.01, 0.3
-    T_g = []
-    for t in _T_camera:
+        theta = 2 * np.pi * (i / float(n_cameras-1))
+        _T.append([0, -theta, 0, -20 * np.sin(theta), 0, 20 * (1 - np.cos(theta))])
+        
         dt = np.concatenate([np.random.uniform(-da, da, 3), np.random.uniform(-dp, dp, 3)])
-        print(dt)
-        t_g = t + dt
-        T_g.append(list(t_g))
+        _T_guess.append(list(_T[i] + dt))
     
-
-    ba = Bundle_adjuster(P, C, T_guess = T_g)
-    ba.optimise(10)
     
-    C.compare_reprojections(_X, ba.X, _T_camera, ba.T, -1)
     
-    for x_t, x_g in zip(_X, ba.X):
-        _x = np.round(x_t, 1)
-        print("Point position (%.1f, %.1f, %.1f)" % (_x[0], _x[1], _x[2]))
-        _x = np.round(x_g, 1)
-        print("Guess position (%.1f, %.1f, %.1f)" % (_x[0], _x[1], _x[2]))
-#
-#    print(ba)
+    P = C.reproject_all(_X, _T, False)
+    ba = Bundle_adjuster(P, C, T_guess = _T_guess)
+    ba.optimise(12)
+    
+    C.compare_reprojections(_X, ba.X, _T, ba.T)
+    
     
     
     
 if __name__ == '__main__':
-    main()
+    run_test()

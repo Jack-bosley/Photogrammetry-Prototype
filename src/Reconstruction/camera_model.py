@@ -5,8 +5,10 @@ Created on Tue Jul  7 19:34:35 2020
 @author: Jack
 """
 
+import os
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import animation
 
 # Class containing pre-calibrated camera information and camera specific methods
 class Camera:
@@ -85,36 +87,33 @@ class Camera:
             
         return reprojection
     
-    def compare_reprojections(self, X_1, X_2, T_1, T_2, number_to_show=-1):
+    def compare_reprojections(self, X_1, X_2, T_1, T_2):
+        # Reproject points
         reprojection_1 = np.array([[self.project(X, T) for X in X_1] for T in T_1])
+        r_1_x, r_1_y = np.squeeze(np.dsplit(reprojection_1, 2))
+        
         reprojection_2 = np.array([[self.project(X, T) for X in X_2] for T in T_2])
+        r_2_x, r_2_y = np.squeeze(np.dsplit(reprojection_2, 2))
         
-        count = len(reprojection_1)
-        I = 0
-        to_show = []
-        for i in range(count):
-            if number_to_show == -1:
-                to_show.append(i)
-            else:
-                _I = int(i * number_to_show / count)
-                if _I > I:
-                    to_show.append(i)
-                    I = _I
+        # Plot points in animated scatter plot
+        fig, ax = plt.subplots(figsize=(8, 4.5))
+        ax.set(xlim=(0, self.w), ylim=(0, self.h))
         
-        # Plot points
-        for i in to_show:
-            p_1, p_2 = reprojection_1[i], reprojection_2[i]
-            p_x_1, p_y_1 = zip(*p_1)
-            p_x_2, p_y_2 = zip(*p_2)
+        scat = [ax.scatter(r_1_x[0], r_1_y[0]), ax.scatter(r_2_x[0], r_2_y[0], marker='x')]
+        def animate(i):
+            scat[0].set_offsets(np.c_[r_1_x[i], r_1_y[i]])
+            scat[1].set_offsets(np.c_[r_2_x[i], r_2_y[i]])
+        
+        anim = animation.FuncAnimation(fig, animate, interval=34, frames=len(reprojection_1-1))
+
+        # Save in Reconstructions file as a gif
+        if not os.path.exists("../../Reconstructions"):
+            os.mkdir("../../Reconstructions")
             
-            plt.scatter(p_x_1, p_y_1)
-            plt.scatter(p_x_2, p_y_2, marker='x')
-            plt.axis('equal')
-            plt.xlim(0, self.w)
-            plt.ylim(0, self.h)
-            plt.legend(["points 1", "points 2"])
-            plt.show()
-    
+        file_number = len(os.listdir("../../Reconstructions"))
+        writergif = animation.PillowWriter(fps=30)
+        anim.save('../../Reconstructions/test_animation(%d).gif' % file_number, writer=writergif)
+         
     # Getters for grouped variables
     def focal_lengths(self):
         return self.f_x, self.f_y

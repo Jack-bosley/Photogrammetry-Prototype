@@ -34,8 +34,7 @@ def main(data_directory, file_base_name):
     brief = BRIEF_classifier(128, 25)  
     # Also keep track of all feature descriptors for matching against
     feature_dict = Feature_dictionary()
-    # Also create an object for reconstructing the scene
-    reconstructor = Bundle_adjuster()
+
     
     
     # Iterate through files
@@ -79,4 +78,4 @@ def get_images(directory, name):
     return zip(*sorted(zip(numbers, files)))
 
 if __name__ == '__main__':
-    main("Data/Video1", "frame")
+    main("../Data/Video1", "frame")

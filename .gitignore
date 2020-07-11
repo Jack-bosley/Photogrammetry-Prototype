@@ -1,8 +1,11 @@
 # Don't bother backing up the video folders
-src/Data/
+Data/
 
 # Ignore pdfs
 Reading/
 
 # Ignore pycache
 **/__pycache__
+
+# Ignore reconstruction gifs
+Reconstructions/
