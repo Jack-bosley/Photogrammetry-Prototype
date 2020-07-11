@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 from scipy import optimize
 
 
-from camera_model import Camera
+from Reconstruction.camera_model import Camera
 
 class Bundle_adjuster:
     

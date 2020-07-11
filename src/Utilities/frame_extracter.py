@@ -30,4 +30,5 @@ def rotate(directory):
 
 
 if __name__ == '__main__':
-    rotate('Video2')
+    extract('../../Data/Video3', 'VID_20200711_141303_LS.mp4')
+    rotate('../../Data/Video3')
