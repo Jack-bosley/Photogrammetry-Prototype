@@ -7,7 +7,7 @@ Created on Sat Jul 11 19:32:01 2020
 
 
 import numpy as np
-import time, threading
+import time
 import matplotlib.pyplot as plt
 
 from PIL import Image
@@ -112,6 +112,8 @@ class Virtual_Realtime_Camera:
         if self.is_running:
             array = np.asarray(self.times)
             i = (np.abs(array - t)).argmin()
+            
+            print(t, i)
             
             return Image.open(self.files[i])
         else:

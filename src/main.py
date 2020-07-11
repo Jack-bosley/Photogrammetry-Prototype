@@ -8,7 +8,7 @@ Created on Wed Jul  1 16:55:51 2020
 
 import os
 import numpy as np
-import time
+import time, threading
 from PIL import Image
 
 from FeatureExtraction.feature_detection import get_corners_fast
@@ -48,6 +48,8 @@ def main():
     
     #bundle_adjuster = Bundle_adjuster()
     
+    vrc.start()
+    vra.start()
     
     # Iterate through files
     scale_factor = 2
@@ -55,6 +57,9 @@ def main():
         
         # Open current image and scale down for speed
         image = vrc.capture()
+        if image == None:
+            break
+        
         image_scaled = np.array(image.resize((image.width // scale_factor, image.height // scale_factor)).convert("L"), 
                                 dtype=np.int16)
         
@@ -76,19 +81,26 @@ def main():
 def get_virtual_realtime_streams(images_directory, images_file_name, data_directory, data_file):
     def get_images(directory, name):  
         # Find all pictures containing name in directory
-        files = os.listdir(directory)
+        files = []
         numbers = []
-        for f in files:
-            if name not in f:
-                files.remove(f)
-            else:
+        for f in os.listdir(directory):
+            if name in f:
                 numbers.append(int(f.split(name)[1].split('.')[0]))
+                files.append(f)
         
         # Modify files to contain full path
         files = [directory + "/" + f for f in files]
         
+        # Get times when images would be seen by camera
+        times = []
+        t = 0
+        for f in files:
+            times.append(t)
+            t += (1.0 / 30)
+        
         # Order by number in name and return 
-        return zip(*sorted(zip(numbers, files)))
+        numbers, files = list(zip(*sorted(zip(numbers, files))))
+        return times, files
     
     def get_data(directory, data_file):
         data = open(directory + "/" + data_file)
@@ -124,12 +136,9 @@ def get_virtual_realtime_streams(images_directory, images_file_name, data_direct
         data.close()
         
         return np.array(T).T, np.array(A).T, np.array(W).T
-
-    times, A, W = get_data(data_directory, data_file)
-    images = get_images(images_directory, images_file_name)
     
-    vra = Virtual_Realtime_Accelerometer(times, A, W)
-    vrc = Virtual_Realtime_Camera(times, images)
+    vra = Virtual_Realtime_Accelerometer(*get_data(data_directory, data_file))
+    vrc = Virtual_Realtime_Camera(*get_images(images_directory, images_file_name))
     
     return vra, vrc
 

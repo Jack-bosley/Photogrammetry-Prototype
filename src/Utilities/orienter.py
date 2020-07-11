@@ -16,7 +16,7 @@ from Utilities.virtual_realtime import Virtual_Realtime_Accelerometer, Virtual_R
 
 
 # Class to compute the orientation and position of the camera approximately
-class Orientor:
+class Orienter:
     
     def __init__(self, x0, v0, r0):
         # Current position
