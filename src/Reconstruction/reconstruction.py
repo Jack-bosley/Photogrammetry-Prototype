@@ -25,8 +25,6 @@ class Bundle_adjuster:
         self.n_cameras = np.shape(pixel_coords)[0]
         self.n_points = np.shape(pixel_coords)[1]
         
-        print(self.n_cameras)
-        print(self.n_points)
         
         self.X = [np.array([0, 0, 5.]).T for i in range(self.n_points)] if X_guess == None else X_guess
         self.T = [np.array([0, 0, 0, 0, 0, 0.]) for i in range(self.n_cameras)] if T_guess == None else T_guess
@@ -145,6 +143,7 @@ class Bundle_adjuster:
         A = np.block(S)
         dc = np.reshape(np.matmul(np.linalg.inv(A), np.block(r_j).T), (self.n_cameras, 6))
         
+        dc[0] = [0,0,0,0,0,0]
         
         # Compute point updates
         dp = [np.zeros((1, 3)) for i in range(self.n_points)]
@@ -154,6 +153,8 @@ class Bundle_adjuster:
                 Wdc += np.matmul(W[j][i].T, dc[j])
             
             dp[i] = np.matmul(V_inv[i], (r_p[i] - Wdc).T).T
+        
+        dp[0] = [0,0,0]
         
         return dp, dc
                     

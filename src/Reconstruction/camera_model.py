@@ -9,6 +9,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import animation
+from mpl_toolkits.mplot3d import Axes3D
 
 # Class containing pre-calibrated camera information and camera specific methods
 class Camera:
@@ -76,28 +77,41 @@ class Camera:
         reprojection = np.array([[self.project(X, T) for X in X] for T in T])           
         return reprojection
     
-    def plot_reprojection(self, X, T):
+    def plot_3d(self, X):
+        
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        
+        # Positions
+        x, y, z = np.array(X).T
+        ax.scatter(x, y, z)
+        
+    
+    def plot_reprojection(self, X, T, true_x=None, true_y=None):
         # Reproject points
         reprojection_1 = np.array([[self.project(X, T) for X in X] for T in T])
         r_1_x, r_1_y = np.squeeze(np.dsplit(reprojection_1, 2))
+        
+        r_2_x, r_2_y = true_x, true_y
         
         
         # Plot points in animated scatter plot
         fig, ax = plt.subplots(figsize=(5, 5 * self.h / self.w))
         ax.set(xlim=(0, self.w), ylim=(0, self.h))
         
-        scat = ax.scatter(r_1_x[0], r_1_y[0])
+        scat = [ax.scatter(r_1_x[0], r_1_y[0], marker='x'), ax.scatter(r_2_x[0], r_2_y[0])]
         def animate(i):
-            scat.set_offsets(np.c_[r_1_x[i], r_1_y[i]])
+            scat[1].set_offsets(np.c_[r_2_x[i], r_2_y[i]])
+            scat[0].set_offsets(np.c_[r_1_x[i], r_1_y[i]])
         
-        anim = animation.FuncAnimation(fig, animate, interval=34, frames=len(reprojection_1-1))
+        anim = animation.FuncAnimation(fig, animate, interval=150, frames=len(reprojection_1-1))
 
         # Save in Reconstructions file as a gif
         if not os.path.exists("../Reconstructions"):
             os.mkdir("../Reconstructions")
             
         file_number = len(os.listdir("../Reconstructions"))
-        writergif = animation.PillowWriter(fps=30)
+        writergif = animation.PillowWriter(fps=10)
         anim.save('../Reconstructions/test_animation(%d).gif' % file_number, writer=writergif)
         
     
@@ -113,10 +127,10 @@ class Camera:
         fig, ax = plt.subplots(figsize=(8, 4.5))
         ax.set(xlim=(0, self.w), ylim=(0, self.h))
         
-        scat = [ax.scatter(r_1_x[0], r_1_y[0]), ax.scatter(r_2_x[0], r_2_y[0], marker='x')]
+        scat = [ax.scatter(r_2_x[0], r_2_y[0]), ax.scatter(r_1_x[0], r_1_y[0], marker='x')]
         def animate(i):
-            scat[0].set_offsets(np.c_[r_1_x[i], r_1_y[i]])
-            scat[1].set_offsets(np.c_[r_2_x[i], r_2_y[i]])
+            scat[0].set_offsets(np.c_[r_2_x[i], r_2_y[i]])
+            scat[1].set_offsets(np.c_[r_1_x[i], r_1_y[i]])
         
         anim = animation.FuncAnimation(fig, animate, interval=34, frames=len(reprojection_1-1))
 

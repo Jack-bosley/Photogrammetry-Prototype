@@ -46,6 +46,7 @@ def main():
     
     # Iterate through files
     scale_factor = 2
+    i = 0
     while vrc.is_running and vra.is_running:
         
         # Open current image and scale down for speed
@@ -69,18 +70,33 @@ def main():
         
         # Update the dictionary with newly spotted features
         feature_dict.update_dictionary(feature_locations, feature_descriptors)
-        
+#        
+#        if i > 10:
+#            presence, locations = feature_dict.get_reproj_targets(7)
+#            T_guess = orienter.get_camera_pose_guess()
+#            
+#            bundle_adjuster = Bundle_adjuster(presence, locations, camera, T_guess=T_guess)
+#            bundle_adjuster.optimise(5)
+#            
+#            #camera.plot_reprojection(bundle_adjuster.X, bundle_adjuster.T)
+#            camera.plot_3d(bundle_adjuster.X)
+#            
+#            break
+        if i > 20:
+            break
+        i += 1
             
-    presence, locations = feature_dict.get_reproj_targets()
+    presence, locations = feature_dict.get_reproj_targets(5)
     
     T_guess = orienter.get_camera_pose_guess()
     
+    true_x, true_y = np.array(locations).T[0].T, np.array(locations).T[1].T
+    
     # Create the bundle adjuster
     bundle_adjuster = Bundle_adjuster(presence, locations, camera, T_guess = T_guess)
-    bundle_adjuster.optimise(20)
-    
-    camera.plot_reprojection(bundle_adjuster.X, bundle_adjuster.T)
-    
+    bundle_adjuster.optimise(10)
+    camera.plot_reprojection(bundle_adjuster.X, bundle_adjuster.T, true_x, true_y)
+    #camera.plot_3d(bundle_adjuster.X)
         
         
 

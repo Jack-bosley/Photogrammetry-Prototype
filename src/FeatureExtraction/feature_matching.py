@@ -12,7 +12,7 @@ import time
 
 class Feature_dictionary:
     
-    def __init__(self):
+    def __init__(self, mode='lsh'):
         
         # Set up FLANN matcher for Local Sensitivity Hashing mode (Needed for Hamming)
         FLANN_INDEX_LSH = 6
@@ -25,7 +25,8 @@ class Feature_dictionary:
         
         # Create the flann matcher
         self.flann = cv2.FlannBasedMatcher(index_params, search_params)
-        
+
+            
         # Store all feature descriptors
         self.all_features = []
         
@@ -88,7 +89,7 @@ class Feature_dictionary:
             
         self.current_image += 1
             
-    def get_reproj_targets(self, min_required_frames=10):
+    def get_reproj_targets(self, min_required_frames=5):
         
         presence = [[] for i in range(len(self.all_feature_locations))]
         p_count = np.array([0 for i in range(len(self.all_feature_locations))])
