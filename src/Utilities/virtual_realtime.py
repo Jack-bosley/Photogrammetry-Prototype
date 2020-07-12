@@ -113,8 +113,6 @@ class Virtual_Realtime_Camera:
             array = np.asarray(self.times)
             i = (np.abs(array - t)).argmin()
             
-            print(t, i)
-            
             return Image.open(self.files[i])
         else:
             return None

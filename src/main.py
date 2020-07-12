@@ -50,16 +50,16 @@ def main():
     
     vrc.start()
     vra.start()
+    t_prev = time.time()
     
     # Iterate through files
     scale_factor = 2
-    while vrc.is_running:
+    while vrc.is_running and vra.is_running:
         
         # Open current image and scale down for speed
         image = vrc.capture()
         if image == None:
             break
-        
         image_scaled = np.array(image.resize((image.width // scale_factor, image.height // scale_factor)).convert("L"), 
                                 dtype=np.int16)
         
@@ -67,13 +67,22 @@ def main():
         ax, ay, az = vra.get_accelerometer_raw()
         ox, oy, oz = vra.get_orientation_radians()
         
+        orienter.update(time.time() - t_prev, [ax, ay, az], [ox, oy, oz])
+        t_prev = time.time()
     
+    
+        t_s = time.time()
         # Get the locations and descriptors of the features
         feature_locations = get_corners_fast(image_scaled, False, brief.S)
         feature_descriptors = brief(image_scaled, feature_locations)
+        t_e = time.time()
+        
+        print(t_e - t_s)
         
         # Update the dictionary with newly spotted features
-        feature_dict.update_dictionary(feature_descriptors)
+        feature_dict.update_dictionary(feature_locations, feature_descriptors)
+        
+        break
         
         
 

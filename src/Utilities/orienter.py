@@ -40,10 +40,12 @@ class Orienter:
         z, x, y = np.multiply(np.array(self.X).T, 1)
         ax.plot(x, y, z)
         
+        n = 50
+        
         # Camera direction
         rz, rx, ry = np.array(self.R).T
-        ax.quiver(x[::10], y[::10], z[::10],
-                  rx[::10], ry[::10], rz[::10], 
+        ax.quiver(x[::n], y[::n], z[::n],
+                  rx[::n], ry[::n], rz[::n], 
                   colors='k', length=0.2, normalize=True)
         
         # Format the plot
@@ -60,9 +62,9 @@ class Orienter:
         ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
         ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
         ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
-        ax.set_xlabel('x position (m)')
-        ax.set_ylabel('y position (m)')
-        ax.set_zlabel('z position (m)')
+        ax.set_xlabel('z position')
+        ax.set_ylabel('x position')
+        ax.set_zlabel('y position')
         ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
         ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
         ax.zaxis.set_major_locator(ticker.MultipleLocator(1))
@@ -72,7 +74,7 @@ class Orienter:
         self.rot = r
         
         # Use orientation to update velocity
-        R = Orientor.rotation_matrix(self.rot[1], self.rot[0], self.rot[2])
+        R = Orienter.rotation_matrix(*self.rot)
         dv = np.matmul(R, np.multiply(a, dt).T)
         self.vel = np.add(self.vel, dv)
         
@@ -83,7 +85,7 @@ class Orienter:
         # Store for plotting
         self.T.append(self.T[-1] + dt)
         self.X.append(self.pos)
-        self.R.append(np.matmul(R, np.array([0, 0, -1]).T).T)
+        self.R.append(np.matmul(R, np.array([0, -1, 0]).T).T)
     
     
     # Get camera rotation matrix from Euler angles
@@ -98,32 +100,5 @@ class Orienter:
                          [sa*cb, (sa*sb*sc) + (ca*cc), (sa*sb*cc) - (ca*sc)], 
                          [  -sb,                cb*sc,                cb*cc]])  
         
-
-def test_projector(directory, data_file):
-
-
-    orientor = Orientor([0, 0, 0], [0, 0, 0], [0, 0, 0])
-    
-    vra = Virtual_Realtime_Accelerometer(*get_data())
-    vra.plot()
-    
-    vra.start()
-    
-    dt = 0.017
-    while vra.is_running:
-        orientor.update(dt, vra.get_accelerometer_raw(), vra.get_orientation_radians())
-        time.sleep(dt)
-
-    orientor.plot()    
-    
-    
-#    
-#    virtual_streamer.plot()
-#    virtual_streamer.run(orientor.update, delta_t=0.1, speed_multiplier=100, t_start=8, t_end=16)
-#    orientor.plot()
-    
-    
-if __name__ == '__main__':
-    test_projector('../../Data/Video3/AccelerometerData', 'accel_gyro_data.csv')
 
 

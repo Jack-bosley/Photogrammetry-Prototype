@@ -29,6 +29,8 @@ class Feature_dictionary:
         # Store all feature descriptors
         self.all_features = np.array([])
         
+        
+        
     
     def descriptor_indices_in_dictionary(self, descriptor):
         matches = self.get_matches(descriptor)
@@ -49,7 +51,7 @@ class Feature_dictionary:
                 
         return indices
         
-    def update_dictionary(self, features):
+    def update_dictionary(self, locations, features):
         
         # If already know about some features
         if len(self.all_features) > 0:
@@ -63,14 +65,16 @@ class Feature_dictionary:
                 # Ignore invalid matches
                 if len(m_2) == 2:
                     
-                    # If not a good match, assume it is a new descriptor and keep track of it
+                    # If not a poor match with both assume it is a new descriptor and keep track of it
                     m, n = m_2
                     if m.distance > 0.9*n.distance:
                         self.all_features = np.vstack([self.all_features, features[m.queryIdx]])
+                        
         
         # Otherwise all features are new, so add all to array of descriptors
         else:
             self.all_features = features
+            
         
         
         
