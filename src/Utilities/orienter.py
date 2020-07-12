@@ -25,10 +25,9 @@ class Orienter:
         self.rot = r0
         
         # Histories for plotting
-        self.T = [0]
-        self.X = [self.pos]
-        self.R = [self.rot]
-       
+        self.X = []
+        self.R = []
+        
         
     def plot(self):
         
@@ -83,10 +82,17 @@ class Orienter:
         self.pos = np.add(self.pos, dx)
         
         # Store for plotting
-        self.T.append(self.T[-1] + dt)
         self.X.append(self.pos)
         self.R.append(np.matmul(R, np.array([0, -1, 0]).T).T)
     
+    def get_camera_pose_guess(self):
+        T_guess = [[] for i in range(len(self.X))]
+        
+        for i, data in enumerate(zip(self.X, self.R)):
+            x, r = data
+            T_guess[i] = [r[0], r[1], r[2], x[0], x[1], x[2]]
+            
+        return T_guess
     
     # Get camera rotation matrix from Euler angles
     @staticmethod

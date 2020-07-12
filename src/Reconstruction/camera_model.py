@@ -72,20 +72,34 @@ class Camera:
         return p_image
 
 
-    def reproject_all(self, X, T, plot_reprojection=False):
-        reprojection = np.array([[self.project(X, T) for X in X] for T in T])
-             
-        # Plot points for debugging purposes
-        if plot_reprojection:
-            for p in reprojection:
-                p_x, p_y = zip(*p)
-                plt.scatter(p_x, p_y)
-                plt.axis('equal')
-                plt.xlim(0, self.w)
-                plt.ylim(0, self.h)
-                plt.show()
-            
+    def reproject_all(self, X, T):
+        reprojection = np.array([[self.project(X, T) for X in X] for T in T])           
         return reprojection
+    
+    def plot_reprojection(self, X, T):
+        # Reproject points
+        reprojection_1 = np.array([[self.project(X, T) for X in X] for T in T])
+        r_1_x, r_1_y = np.squeeze(np.dsplit(reprojection_1, 2))
+        
+        
+        # Plot points in animated scatter plot
+        fig, ax = plt.subplots(figsize=(5, 5 * self.h / self.w))
+        ax.set(xlim=(0, self.w), ylim=(0, self.h))
+        
+        scat = ax.scatter(r_1_x[0], r_1_y[0])
+        def animate(i):
+            scat.set_offsets(np.c_[r_1_x[i], r_1_y[i]])
+        
+        anim = animation.FuncAnimation(fig, animate, interval=34, frames=len(reprojection_1-1))
+
+        # Save in Reconstructions file as a gif
+        if not os.path.exists("../Reconstructions"):
+            os.mkdir("../Reconstructions")
+            
+        file_number = len(os.listdir("../Reconstructions"))
+        writergif = animation.PillowWriter(fps=30)
+        anim.save('../Reconstructions/test_animation(%d).gif' % file_number, writer=writergif)
+        
     
     def compare_reprojections(self, X_1, X_2, T_1, T_2):
         # Reproject points
@@ -107,13 +121,13 @@ class Camera:
         anim = animation.FuncAnimation(fig, animate, interval=34, frames=len(reprojection_1-1))
 
         # Save in Reconstructions file as a gif
-        if not os.path.exists("../../Reconstructions"):
-            os.mkdir("../../Reconstructions")
+        if not os.path.exists("../Reconstructions"):
+            os.mkdir("../Reconstructions")
             
-        file_number = len(os.listdir("../../Reconstructions"))
+        file_number = len(os.listdir("../Reconstructions"))
         writergif = animation.PillowWriter(fps=30)
-        anim.save('../../Reconstructions/test_animation(%d).gif' % file_number, writer=writergif)
-         
+        anim.save('../Reconstructions/test_animation(%d).gif' % file_number, writer=writergif)
+                
     # Getters for grouped variables
     def focal_lengths(self):
         return self.f_x, self.f_y

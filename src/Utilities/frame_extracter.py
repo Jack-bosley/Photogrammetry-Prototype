@@ -20,15 +20,13 @@ def extract(directory, file):
       count += 1
 
 def rotate(directory):
-    
     for f in os.listdir(directory):
         if '.' not in f:
-            break
-        
+            continue
+        print(f)
         rotated = cv2.rotate(cv2.imread(directory + "/" + f), cv2.ROTATE_90_CLOCKWISE)
         cv2.imwrite(directory + "/" + f, rotated)
 
 
 if __name__ == '__main__':
-    extract('../../Data/Video3', 'VID_20200711_141303_LS.mp4')
     rotate('../../Data/Video3')

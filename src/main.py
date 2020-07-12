@@ -37,16 +37,8 @@ def main():
     orienter = Orienter([0,0,0], [0,0,0], [0,0,0])
     
     # Create a model camera for bundle adjustment                                   (To Do: Calibrate)
-    camera = Camera(9/16, 1, 0, 0, 0, 0, 0, 512, 384)
-    # Create the bundle adjuster
+    camera = Camera(9/16, 1, 0, 0, 0, 0, 0, 384, 512)
     
-    # To do:
-    #   Allow bundle adjuster to take in new pictures as they arrive
-    #   Allow bundle adjuster to consider new feature points as they are noticed
-    #   Allow bundle adjuster to feed output back to orienter 
-    #
-    
-    #bundle_adjuster = Bundle_adjuster()
     
     vrc.start()
     vra.start()
@@ -70,19 +62,25 @@ def main():
         orienter.update(time.time() - t_prev, [ax, ay, az], [ox, oy, oz])
         t_prev = time.time()
     
-    
-        t_s = time.time()
         # Get the locations and descriptors of the features
         feature_locations = get_corners_fast(image_scaled, False, brief.S)
         feature_descriptors = brief(image_scaled, feature_locations)
-        t_e = time.time()
         
-        print(t_e - t_s)
         
         # Update the dictionary with newly spotted features
         feature_dict.update_dictionary(feature_locations, feature_descriptors)
         
-        break
+            
+    presence, locations = feature_dict.get_reproj_targets()
+    
+    T_guess = orienter.get_camera_pose_guess()
+    
+    # Create the bundle adjuster
+    bundle_adjuster = Bundle_adjuster(presence, locations, camera, T_guess = T_guess)
+    bundle_adjuster.optimise(20)
+    
+    camera.plot_reprojection(bundle_adjuster.X, bundle_adjuster.T)
+    
         
         
 

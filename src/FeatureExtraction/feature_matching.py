@@ -27,7 +27,10 @@ class Feature_dictionary:
         self.flann = cv2.FlannBasedMatcher(index_params, search_params)
         
         # Store all feature descriptors
-        self.all_features = np.array([])
+        self.all_features = []
+        
+        self.current_image = 0
+        self.all_feature_locations = {}
         
         
         
@@ -65,20 +68,52 @@ class Feature_dictionary:
                 # Ignore invalid matches
                 if len(m_2) == 2:
                     
-                    # If not a poor match with both assume it is a new descriptor and keep track of it
                     m, n = m_2
+                    dict_index = m.trainIdx
+                    new_feat_index = m.queryIdx
+                    
+                    # If a poor match with both assume it is a new descriptor and keep track of it
                     if m.distance > 0.9*n.distance:
-                        self.all_features = np.vstack([self.all_features, features[m.queryIdx]])
-                        
+                        self.all_feature_locations[len(self.all_features)] = {self.current_image: locations[new_feat_index]}
+                        self.all_features.append(features[new_feat_index])
+                    elif m.distance < 0.7*n.distance:
+                        self.all_feature_locations[dict_index][self.current_image] = locations[new_feat_index]
+                    
         
         # Otherwise all features are new, so add all to array of descriptors
         else:
-            self.all_features = features
+            for i, f in enumerate(features):
+                self.all_features.append(f)
+                self.all_feature_locations[i] = {self.current_image: locations[i]}
             
+        self.current_image += 1
+            
+    def get_reproj_targets(self, min_required_frames=10):
         
+        presence = [[] for i in range(len(self.all_feature_locations))]
+        p_count = np.array([0 for i in range(len(self.all_feature_locations))])
+        locations = [[] for i in range(len(self.all_feature_locations))]
+        for feature_locations in self.all_feature_locations:
+            for image in range(self.current_image):
+                if image in self.all_feature_locations[feature_locations]:
+                    locations[feature_locations].append(self.all_feature_locations[feature_locations][image])
+                    presence[feature_locations].append(True)
+                    p_count[feature_locations] += 1
+                else:
+                    locations[feature_locations].append(np.array([0, 0]))
+                    presence[feature_locations].append(False)
+                    
         
+
+        to_keep = np.where(p_count > min_required_frames)
+        presence = np.array(presence)[to_keep].T.tolist()
+        locations= np.transpose(np.array(locations)[to_keep], axes=(1, 0, 2)).tolist()  
+           
+        print(np.shape(presence), np.shape(locations))
+        
+        return presence, locations
         
     def get_matches(self, features, k=2):
         # k nearest neighbours (query, train, k)
-        return self.flann.knnMatch(features, self.all_features, k=k)
+        return self.flann.knnMatch(features, np.array(self.all_features), k=k)
     

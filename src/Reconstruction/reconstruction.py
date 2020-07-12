@@ -16,15 +16,19 @@ from Reconstruction.camera_model import Camera
 
 class Bundle_adjuster:
     
-    def __init__(self, P, C:Camera, X_guess=None, T_guess=None):
+    def __init__(self, presence, pixel_coords, C:Camera, X_guess=None, T_guess=None):
         
-        self.P = P
+        self.presence = presence
+        self.pixel_coords = pixel_coords
         self.C = C
         
-        self.n_cameras = np.shape(P)[0]
-        self.n_points = np.shape(P)[1]
+        self.n_cameras = np.shape(pixel_coords)[0]
+        self.n_points = np.shape(pixel_coords)[1]
         
-        self.X = [np.array([0, 0, 10.]).T for i in range(self.n_points)] if X_guess == None else X_guess
+        print(self.n_cameras)
+        print(self.n_points)
+        
+        self.X = [np.array([0, 0, 5.]).T for i in range(self.n_points)] if X_guess == None else X_guess
         self.T = [np.array([0, 0, 0, 0, 0, 0.]) for i in range(self.n_cameras)] if T_guess == None else T_guess
         
 
@@ -34,6 +38,7 @@ class Bundle_adjuster:
         c0 = self.cost()
         
         for i in range(num_steps):
+            print(i)
             dp, dc = self.corrections(damping)
         
             self.update_guess(dp, dc)
@@ -59,7 +64,11 @@ class Bundle_adjuster:
 
     def cost(self):
         P_guess = self.C.reproject_all(self.X, self.T)
-        return np.sum(np.square(self.robustifier(np.subtract(self.P, P_guess))))
+        
+        error = np.subtract(self.pixel_coords, P_guess)
+        absents = np.where(self.presence == False)
+        error[absents] = np.array([0, 0])
+        return np.sum(np.square(self.robustifier(error)))
 
 
     def robustifier(self, x, sigma=0.3):
@@ -90,7 +99,7 @@ class Bundle_adjuster:
             for j, _T in enumerate(self.T):
 
                 # Get the error vector
-                r[j][i] = self.P[j, i] - self.C.project(_X, _T)
+                r[j][i] = self.pixel_coords[j][i] - self.C.project(_X, _T) if self.presence[j][i] else np.array([0, 0])
                 dx, dy = r[j][i]
                 r_robust[j][i] = self.robustifier(np.sqrt(dx**2 + dy**2))
                 
@@ -157,45 +166,3 @@ class Bundle_adjuster:
             _t = np.round(t, 1)
             string += ("Rotation (%.1f, %.1f, %.1f),\tPosition(%.1f, %.1f, %.1f)\n" % (_t[0], _t[1], _t[2], _t[3], _t[4], _t[5]))
         return string
-
-
-
-def run_test():
-    C = Camera(9/16, 1, 0, 0, 0, 0, 0, 1280, 720)
-
-    _X = []
-    _T = []
-    
-    # Supplied guess (irl maybe from accelerometer)
-    _T_guess = []
-    # Error in camera position values
-    da, dp = 0.3, 2 
-    
-    n_points = 10
-    for i in range(n_points):
-        x = np.random.uniform(-4, 4)
-        y = np.random.uniform(-4, 4)
-        z = np.random.uniform(15, 25)
-        _X.append(np.array([x, y, z]))
-    
-    n_cameras = 60
-    for i in range(n_cameras):
-        theta = 2 * np.pi * (i / float(n_cameras-1))
-        _T.append([0, -theta, 0, -20 * np.sin(theta), 0, 20 * (1 - np.cos(theta))])
-        
-        dt = np.concatenate([np.random.uniform(-da, da, 3), np.random.uniform(-dp, dp, 3)])
-        _T_guess.append(list(_T[i] + dt))
-    
-    
-    
-    P = C.reproject_all(_X, _T, False)
-    ba = Bundle_adjuster(P, C, T_guess = _T_guess)
-    ba.optimise(12)
-    
-    C.compare_reprojections(_X, ba.X, _T, ba.T)
-    
-    
-    
-    
-if __name__ == '__main__':
-    run_test()
