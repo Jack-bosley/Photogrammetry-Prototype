@@ -77,10 +77,11 @@ class Camera:
         reprojection = np.array([[self.project(X, T) for X in X] for T in T])           
         return reprojection
     
-    def plot_3d(self, X):
+    def plot_3d(self, X, ax=None):
         
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+        if ax == None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
         
         # Positions
         x, y, z = np.array(X).T
@@ -134,6 +135,7 @@ class Camera:
         
         anim = animation.FuncAnimation(fig, animate, interval=34, frames=len(reprojection_1-1))
 
+        print("try to save")
         # Save in Reconstructions file as a gif
         if not os.path.exists("../Reconstructions"):
             os.mkdir("../Reconstructions")
@@ -141,6 +143,7 @@ class Camera:
         file_number = len(os.listdir("../Reconstructions"))
         writergif = animation.PillowWriter(fps=30)
         anim.save('../Reconstructions/test_animation(%d).gif' % file_number, writer=writergif)
+        print("saved %d" % file_number)
                 
     # Getters for grouped variables
     def focal_lengths(self):

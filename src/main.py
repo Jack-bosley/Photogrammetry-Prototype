@@ -9,7 +9,7 @@ Created on Wed Jul  1 16:55:51 2020
 import os
 import numpy as np
 import time, threading
-from PIL import Image
+import cv2
 
 from FeatureExtraction.feature_detection import get_corners_fast
 from FeatureExtraction.feature_classifier import BRIEF_classifier
@@ -28,8 +28,8 @@ def main():
     vra, vrc = get_virtual_realtime_streams("../Data/Video3", "frame", 
                                             "../Data/Video3/AccelerometerData", "accel_gyro_data.csv")
     
-    # Generate a BRIEF classifier
-    brief = BRIEF_classifier(128, 25)  
+    # Generate a surf classifier
+    surf = cv2.xfeatures2d.SIFT_create(150)
     # Also keep track of all feature descriptors for matching against
     feature_dict = Feature_dictionary()
     
@@ -45,16 +45,13 @@ def main():
     t_prev = time.time()
     
     # Iterate through files
-    scale_factor = 2
     i = 0
     while vrc.is_running and vra.is_running:
         
         # Open current image and scale down for speed
         image = vrc.capture()
-        if image == None:
+        if type(image) == type(None):
             break
-        image_scaled = np.array(image.resize((image.width // scale_factor, image.height // scale_factor)).convert("L"), 
-                                dtype=np.int16)
         
         # Get the translation of the camera
         ax, ay, az = vra.get_accelerometer_raw()
@@ -64,29 +61,17 @@ def main():
         t_prev = time.time()
     
         # Get the locations and descriptors of the features
-        feature_locations = get_corners_fast(image_scaled, False, brief.S)
-        feature_descriptors = brief(image_scaled, feature_locations)
+        feature_locations, feature_descriptors = surf.detectAndCompute(image, None)
         
         
         # Update the dictionary with newly spotted features
         feature_dict.update_dictionary(feature_locations, feature_descriptors)
-#        
-#        if i > 10:
-#            presence, locations = feature_dict.get_reproj_targets(7)
-#            T_guess = orienter.get_camera_pose_guess()
-#            
-#            bundle_adjuster = Bundle_adjuster(presence, locations, camera, T_guess=T_guess)
-#            bundle_adjuster.optimise(5)
-#            
-#            #camera.plot_reprojection(bundle_adjuster.X, bundle_adjuster.T)
-#            camera.plot_3d(bundle_adjuster.X)
-#            
+        
+#        i += 1
+#        if i >= 10:
 #            break
-        if i > 20:
-            break
-        i += 1
-            
-    presence, locations = feature_dict.get_reproj_targets(5)
+      
+    presence, locations = feature_dict.get_reproj_targets(15)
     
     T_guess = orienter.get_camera_pose_guess()
     
@@ -94,10 +79,12 @@ def main():
     
     # Create the bundle adjuster
     bundle_adjuster = Bundle_adjuster(presence, locations, camera, T_guess = T_guess)
-    bundle_adjuster.optimise(10)
+    bundle_adjuster.optimise(5)
     camera.plot_reprojection(bundle_adjuster.X, bundle_adjuster.T, true_x, true_y)
-    #camera.plot_3d(bundle_adjuster.X)
-        
+    camera.plot_3d(bundle_adjuster.X)
+    
+    
+    print(bundle_adjuster)
         
 
 

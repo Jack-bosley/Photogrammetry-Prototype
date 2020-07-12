@@ -5,28 +5,25 @@ Created on Sat Jul  4 13:24:47 2020
 @author: Jack
 """
 
-import time
-
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy import optimize
 
 
-from Reconstruction.camera_model import Camera
+from camera_model import Camera
+
 
 class Bundle_adjuster:
     
-    def __init__(self, presence, pixel_coords, C:Camera, X_guess=None, T_guess=None):
+    def __init__(self, P, C:Camera, X_guess=None, T_guess=None):
         
-        self.presence = presence
-        self.pixel_coords = pixel_coords
+        self.P = P
         self.C = C
         
-        self.n_cameras = np.shape(pixel_coords)[0]
-        self.n_points = np.shape(pixel_coords)[1]
+        self.n_cameras = np.shape(P)[0]
+        self.n_points = np.shape(P)[1]
         
-        
-        self.X = [np.array([0, 0, 5.]).T for i in range(self.n_points)] if X_guess == None else X_guess
+        self.X = [np.array([0, 0, 10.]).T for i in range(self.n_points)] if X_guess == None else X_guess
         self.T = [np.array([0, 0, 0, 0, 0, 0.]) for i in range(self.n_cameras)] if T_guess == None else T_guess
         
 
@@ -36,9 +33,9 @@ class Bundle_adjuster:
         c0 = self.cost()
         
         for i in range(num_steps):
-            print(i)
             dp, dc = self.corrections(damping)
-        
+            
+                        
             self.update_guess(dp, dc)
             
             if c0 > self.cost():
@@ -62,14 +59,10 @@ class Bundle_adjuster:
 
     def cost(self):
         P_guess = self.C.reproject_all(self.X, self.T)
-        
-        error = np.subtract(self.pixel_coords, P_guess)
-        absents = np.where(self.presence == False)
-        error[absents] = np.array([0, 0])
-        return np.sum(np.square(self.robustifier(error)))
+        return np.sum(np.square(self.robustifier(np.subtract(self.P, P_guess))))
 
 
-    def robustifier(self, x, sigma=0.3):
+    def robustifier(self, x, sigma=0.1):
         return np.log(np.add(1, np.divide(np.square(np.divide(x, sigma)), 2)))
 
     def corrections(self, damping):
@@ -97,7 +90,7 @@ class Bundle_adjuster:
             for j, _T in enumerate(self.T):
 
                 # Get the error vector
-                r[j][i] = self.pixel_coords[j][i] - self.C.project(_X, _T) if self.presence[j][i] else np.array([0, 0])
+                r[j][i] = self.P[j, i] - self.C.project(_X, _T)
                 dx, dy = r[j][i]
                 r_robust[j][i] = self.robustifier(np.sqrt(dx**2 + dy**2))
                 
@@ -143,8 +136,6 @@ class Bundle_adjuster:
         A = np.block(S)
         dc = np.reshape(np.matmul(np.linalg.inv(A), np.block(r_j).T), (self.n_cameras, 6))
         
-        dc[0] = [0,0,0,0,0,0]
-        
         # Compute point updates
         dp = [np.zeros((1, 3)) for i in range(self.n_points)]
         for i in range(self.n_points):
@@ -153,8 +144,6 @@ class Bundle_adjuster:
                 Wdc += np.matmul(W[j][i].T, dc[j])
             
             dp[i] = np.matmul(V_inv[i], (r_p[i] - Wdc).T).T
-        
-        dp[0] = [0,0,0]
         
         return dp, dc
                     
@@ -167,3 +156,65 @@ class Bundle_adjuster:
             _t = np.round(t, 1)
             string += ("Rotation (%.1f, %.1f, %.1f),\tPosition(%.1f, %.1f, %.1f)\n" % (_t[0], _t[1], _t[2], _t[3], _t[4], _t[5]))
         return string
+
+
+def run_test():
+    C = Camera(9/16, 1, 0, 0, 0, 0, 0, 1280, 720)
+
+    _X = []
+    _T = []
+    
+    # Supplied guess (irl maybe from accelerometer)
+    _T_guess = []
+    # Error in camera position values
+    da, dp = 0.3, 2 
+    
+    n_points = 13
+    for i in range(n_points):
+        x = np.random.uniform(-10, 10)
+        y = np.random.uniform(-10, 10)
+        z = np.random.uniform(8, 12)
+        _X.append(np.array([x, y, z]))
+    
+    n_cameras = 60
+    for i in range(n_cameras):
+        theta = 2 * np.pi * (i / float(n_cameras-1))
+        _T.append([0, -theta, 0, -20 * np.sin(theta), 0, 20 * (1 - np.cos(theta))])
+        
+        if i != 0:
+            dt = np.concatenate([np.random.uniform(-da, da, 3), np.random.uniform(-dp, dp, 3)])
+            _T_guess.append(list(_T[i] + dt))
+        else:
+            _T_guess.append(list(_T[i]))
+    
+    
+    print(_X)
+    
+    P = C.reproject_all(_X, _T)
+    px, py = np.squeeze(np.dsplit(P, 2))
+    presence = [[True for i in range(n_points)] for j in range(n_cameras)]
+    
+    
+    for i in range(n_points):
+        for j in range(n_cameras):
+            _px = px[j][i]
+            _py = py[j][i]
+            #presence[j][i] = ((_px > 0 and _px < 1280) and (_py > 0 and _py < 720))
+            presence[j][i] = True
+            
+#    print(presence)
+     
+    ba = Bundle_adjuster(P, C, T_guess = _T_guess)
+    ba.optimise(10)
+    
+    C.compare_reprojections(_X, ba.X, _T, ba.T)
+#    C.plot_3d(ba.X, ax)
+#    C.plot_3d(_X, ax)
+#    print(ba)
+    
+    
+    
+if __name__ == '__main__':
+    run_test()
+
+

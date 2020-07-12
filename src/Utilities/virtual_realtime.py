@@ -9,8 +9,7 @@ Created on Sat Jul 11 19:32:01 2020
 import numpy as np
 import time
 import matplotlib.pyplot as plt
-
-from PIL import Image
+import cv2
 
 # Immitate a real-time gyroscope / accelerometer data stream
 # Mimics the raspberry pi sense hat
@@ -113,7 +112,7 @@ class Virtual_Realtime_Camera:
             array = np.asarray(self.times)
             i = (np.abs(array - t)).argmin()
             
-            return Image.open(self.files[i])
+            return cv2.imread(self.files[i])
         else:
             return None
         
