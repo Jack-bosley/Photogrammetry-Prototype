@@ -141,7 +141,7 @@ class Camera:
             os.mkdir("../Reconstructions")
             
         file_number = len(os.listdir("../Reconstructions"))
-        writergif = animation.PillowWriter(fps=30)
+        writergif = animation.PillowWriter(fps=15)
         anim.save('../Reconstructions/test_animation(%d).gif' % file_number, writer=writergif)
         print("saved %d" % file_number)
                 

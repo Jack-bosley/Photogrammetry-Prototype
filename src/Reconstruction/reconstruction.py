@@ -15,10 +15,13 @@ from camera_model import Camera
 
 class Bundle_adjuster:
     
-    def __init__(self, P, C:Camera, X_guess=None, T_guess=None):
+    def __init__(self, P_present, P, C:Camera, X_guess=None, T_guess=None):
         
+        self.P_present = P_present
         self.P = P
         self.C = C
+        
+        print(np.shape(P), np.shape(P_present))
         
         self.n_cameras = np.shape(P)[0]
         self.n_points = np.shape(P)[1]
@@ -33,6 +36,7 @@ class Bundle_adjuster:
         c0 = self.cost()
         
         for i in range(num_steps):
+            print(i)
             dp, dc = self.corrections(damping)
             
                         
@@ -88,7 +92,9 @@ class Bundle_adjuster:
         for i, _X in enumerate(self.X):
             # For every camera
             for j, _T in enumerate(self.T):
-
+                if not self.P_present[j][i]:
+                    continue
+                
                 # Get the error vector
                 r[j][i] = self.P[j, i] - self.C.project(_X, _T)
                 dx, dy = r[j][i]
@@ -169,7 +175,7 @@ def run_test():
     # Error in camera position values
     da, dp = 0.3, 2 
     
-    n_points = 13
+    n_points = 150
     for i in range(n_points):
         x = np.random.uniform(-10, 10)
         y = np.random.uniform(-10, 10)
@@ -186,9 +192,7 @@ def run_test():
             _T_guess.append(list(_T[i] + dt))
         else:
             _T_guess.append(list(_T[i]))
-    
-    
-    print(_X)
+       
     
     P = C.reproject_all(_X, _T)
     px, py = np.squeeze(np.dsplit(P, 2))
@@ -199,13 +203,15 @@ def run_test():
         for j in range(n_cameras):
             _px = px[j][i]
             _py = py[j][i]
-            #presence[j][i] = ((_px > 0 and _px < 1280) and (_py > 0 and _py < 720))
-            presence[j][i] = True
+            presence[j][i] = ((_px > 0 and _px < 1280) and (_py > 0 and _py < 720))
+            #presence[j][i] = True
             
 #    print(presence)
      
-    ba = Bundle_adjuster(P, C, T_guess = _T_guess)
-    ba.optimise(10)
+    ba = Bundle_adjuster(presence, P, C, T_guess = _T_guess)
+    ba.optimise(5)
+    
+    
     
     C.compare_reprojections(_X, ba.X, _T, ba.T)
 #    C.plot_3d(ba.X, ax)
