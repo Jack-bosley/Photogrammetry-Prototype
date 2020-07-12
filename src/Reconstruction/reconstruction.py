@@ -62,8 +62,15 @@ class Bundle_adjuster:
 
 
     def cost(self):
+        # Get the locations of reprojected points
         P_guess = self.C.reproject_all(self.X, self.T)
-        return np.sum(np.square(self.robustifier(np.subtract(self.P, P_guess))))
+        # Find the difference between these reprojections and the targets
+        error = np.subtract(self.P, P_guess)
+        # Filter out points where the true location is not known
+        e_0 = np.where(np.array(self.P_present) == True)
+        error = error[e_0]
+        # Find the robustified sum square error
+        return np.sum(np.square(self.robustifier(error)))
 
 
     def robustifier(self, x, sigma=0.1):
@@ -175,7 +182,7 @@ def run_test():
     # Error in camera position values
     da, dp = 0.3, 2 
     
-    n_points = 150
+    n_points = 25
     for i in range(n_points):
         x = np.random.uniform(-10, 10)
         y = np.random.uniform(-10, 10)
@@ -199,21 +206,27 @@ def run_test():
     presence = [[True for i in range(n_points)] for j in range(n_cameras)]
     
     
+    
     for i in range(n_points):
         for j in range(n_cameras):
             _px = px[j][i]
             _py = py[j][i]
             presence[j][i] = ((_px > 0 and _px < 1280) and (_py > 0 and _py < 720))
+            if not presence[j][i]:
+                P[j, i] = np.array([0, 0])
+            
             #presence[j][i] = True
             
 #    print(presence)
      
     ba = Bundle_adjuster(presence, P, C, T_guess = _T_guess)
+    
+    
     ba.optimise(5)
-    
-    
-    
-    C.compare_reprojections(_X, ba.X, _T, ba.T)
+#    
+#    
+#    
+    C.compare_reprojections(ba.X, _X, ba.T, _T)
 #    C.plot_3d(ba.X, ax)
 #    C.plot_3d(_X, ax)
 #    print(ba)
