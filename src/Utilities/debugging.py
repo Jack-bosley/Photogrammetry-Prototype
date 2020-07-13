@@ -7,38 +7,30 @@ Created on Sat Jul  4 13:39:31 2020
 
 import os
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
-from FeatureExtraction.feature_matching import Feature_dictionary
-
-def impose_features(feature_dictionary, feature_points, feature_descriptors, 
-                    image, scale_factor = 1, directory = "", name="Corners"):
-
-    # Create directory to save images to if does not exist
-    if directory != "" and not os.path.isdir(directory):
-        os.mkdir(directory)
+import cv2
+import matplotlib.pyplot as plt
+from matplotlib import animation
 
 
-    # Get feature indices in dictionary
-    feature_numbers = feature_dictionary.descriptor_indices_in_dictionary(feature_descriptors)
-
-    # Set up image for drawing
-    d = ImageDraw.Draw(image)
-    fnt = ImageFont.truetype("arial.ttf", 20)
-    dot_size = 2
+def features_on_video(frames, features):
+    fig = plt.figure(dpi=500)
     
+    ims = []
     
-    # Iterate over all features
-    for i, data in enumerate(feature_points):
-        # Scale position to image
-        r_s, c_s = data
-        r = r_s * scale_factor
-        c = c_s * scale_factor        
+    for f, locs in zip(frames, features):
+        for i, l in enumerate(locs):
+            f = cv2.circle(f, (int(l[1]), int(l[0])), radius=4, color=(255, 255, 255), thickness=2)
+            f = cv2.putText(f, str(i), (int(l[1]), int(l[0])), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 255)
         
+        im = plt.imshow(f, animated=True)
+        ims.append([im])
         
-        # Draw feature on picture
-        d.line([(c-dot_size, r-dot_size), (c+dot_size, r+dot_size)], width=1)
-        d.line([(c-dot_size, r+dot_size), (c+dot_size, r-dot_size)], width=1)        
-        d.text((c, r + 10), str(feature_numbers[i]), font=fnt)
+    anim = animation.ArtistAnimation(fig, ims, interval=200)
     
-    image.save(((directory + "/") if directory != "" else "") + (name + ".bmp"))
-    image.close()
+    
+    if not os.path.exists("../Reconstructions"):
+        os.mkdir("../Reconstructions")
+        
+    file_number = len(os.listdir("../Reconstructions"))
+    writergif = animation.PillowWriter(fps=2)
+    anim.save('../Reconstructions/debugging(%d).gif' % file_number, writer=writergif)

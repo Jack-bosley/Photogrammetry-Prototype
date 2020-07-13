@@ -29,4 +29,4 @@ def rotate(directory):
 
 
 if __name__ == '__main__':
-    rotate('../../Data/Video3')
+    rotate('../../Data/Photos1')

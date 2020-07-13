@@ -11,10 +11,14 @@ import cv2
 class Feature_dictionary:
     
     def __init__(self):
-        # FLANN parameters
-        FLANN_INDEX_KDTREE = 0
-        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-        search_params = dict(checks=50)   # or pass empty dictionary
+        # Set up FLANN matcher for Local Sensitivity Hashing mode (Needed for Hamming)
+        FLANN_INDEX_LSH = 6
+        index_params= dict(algorithm = FLANN_INDEX_LSH,
+                           table_number = 6, # 12
+                           key_size = 12,     # 20
+                           multi_probe_level = 1) #2
+        
+        search_params = dict(checks = 50)
         
         # Create the flann matcher
         self.flann = cv2.FlannBasedMatcher(index_params, search_params)
@@ -25,8 +29,6 @@ class Feature_dictionary:
         
         self.current_image = 0
         self.all_feature_locations = {}
-        
-        
         
     
     def descriptor_indices_in_dictionary(self, descriptor):
@@ -66,7 +68,7 @@ class Feature_dictionary:
                     dict_index = m.trainIdx
                     new_feat_index = m.queryIdx
                     
-                    pt_location = np.array(locations[new_feat_index].pt)
+                    pt_location = np.array(locations[new_feat_index])
                     # If a poor match with both assume it is a new descriptor and keep track of it
                     if m.distance > 0.95*n.distance:
                         self.all_feature_locations[len(self.all_features)] = {self.current_image: pt_location}
@@ -79,10 +81,10 @@ class Feature_dictionary:
         else:
             for i, f in enumerate(features):
                 self.all_features.append(f)
-                self.all_feature_locations[i] = {self.current_image: np.array(locations[i].pt)}
+                self.all_feature_locations[i] = {self.current_image: np.array(locations[i])}
             
         self.current_image += 1
-            
+        
     def get_reproj_targets(self, min_required_frames=0):
         
 #        print(self.all_feature_locations)
@@ -102,10 +104,8 @@ class Feature_dictionary:
                     presence[feature_locations].append(False)
                    
         to_keep = np.where(p_count > min_required_frames)
-        presence = np.array(presence)[to_keep].T.tolist()
-        locations= np.transpose(np.array(locations)[to_keep], axes=(1, 0, 2)).tolist()  
-           
-        print(np.shape(presence), np.shape(locations)) 
+        presence = np.array(presence)[to_keep].T
+        locations= np.transpose(np.array(locations)[to_keep], axes=(1, 0, 2))
 
         return presence, locations
     

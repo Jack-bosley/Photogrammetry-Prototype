@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 from scipy import optimize
 
 
-from camera_model import Camera
+from Reconstruction.camera_model import Camera
 
 
 class Bundle_adjuster:
@@ -38,7 +38,6 @@ class Bundle_adjuster:
         for i in range(num_steps):
             print(i)
             dp, dc = self.corrections(damping)
-            
                         
             self.update_guess(dp, dc)
             
@@ -204,6 +203,8 @@ def run_test():
     P = C.reproject_all(_X, _T)
     px, py = np.squeeze(np.dsplit(P, 2))
     presence = [[True for i in range(n_points)] for j in range(n_cameras)]
+    
+    print(P)
     
     
     

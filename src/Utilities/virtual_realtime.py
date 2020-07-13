@@ -112,7 +112,7 @@ class Virtual_Realtime_Camera:
             array = np.asarray(self.times)
             i = (np.abs(array - t)).argmin()
             
-            return cv2.imread(self.files[i])
+            return cv2.imread(self.files[i], cv2.IMREAD_GRAYSCALE)
         else:
             return None
         

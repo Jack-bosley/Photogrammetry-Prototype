@@ -100,10 +100,17 @@ class Camera:
         fig, ax = plt.subplots(figsize=(5, 5 * self.h / self.w))
         ax.set(xlim=(0, self.w), ylim=(0, self.h))
         
-        scat = [ax.scatter(r_1_x[0], r_1_y[0], marker='x'), ax.scatter(r_2_x[0], r_2_y[0])]
+        if type(true_x) != type(None) and type(true_y) != type(None):
+            scat = [ax.scatter(r_1_x[0], r_1_y[0], marker='x'), ax.scatter(r_2_x[0], r_2_y[0])]
+        else:
+            scat = ax.scatter(r_1_x[0], r_1_y[0], marker='x')
+            
         def animate(i):
-            scat[1].set_offsets(np.c_[r_2_x[i], r_2_y[i]])
-            scat[0].set_offsets(np.c_[r_1_x[i], r_1_y[i]])
+            if type(true_x) != type(None) and type(true_y) != type(None):
+                scat[1].set_offsets(np.c_[r_2_x[i], r_2_y[i]])
+                scat[0].set_offsets(np.c_[r_1_x[i], r_1_y[i]])
+            else:
+                scat.set_offsets(np.c_[r_1_x[i], r_1_y[i]])
         
         anim = animation.FuncAnimation(fig, animate, interval=150, frames=len(reprojection_1-1))
 
@@ -112,7 +119,7 @@ class Camera:
             os.mkdir("../Reconstructions")
             
         file_number = len(os.listdir("../Reconstructions"))
-        writergif = animation.PillowWriter(fps=10)
+        writergif = animation.PillowWriter(fps=60)
         anim.save('../Reconstructions/test_animation(%d).gif' % file_number, writer=writergif)
         
     

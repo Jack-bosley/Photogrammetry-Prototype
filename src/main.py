@@ -18,18 +18,15 @@ from FeatureExtraction.feature_matching import Feature_dictionary
 from Reconstruction.reconstruction import Bundle_adjuster
 from Reconstruction.camera_model import Camera
 
-from Utilities.debugging import impose_features
+from Utilities.debugging import features_on_video
 from Utilities.virtual_realtime import Virtual_Realtime_Accelerometer, Virtual_Realtime_Camera
 from Utilities.orienter import Orienter
 
 
 def main():  
     
-    vra, vrc = get_virtual_realtime_streams("../Data/Video3", "frame", 
-                                            "../Data/Video3/AccelerometerData", "accel_gyro_data.csv")
-    
     # Generate a surf classifier
-    surf = cv2.xfeatures2d.SIFT_create(150)
+    brief = BRIEF_classifier(128, 25)
     # Also keep track of all feature descriptors for matching against
     feature_dict = Feature_dictionary()
     
@@ -40,119 +37,45 @@ def main():
     camera = Camera(9/16, 1, 0, 0, 0, 0, 0, 384, 512)
     
     
-    vrc.start()
-    vra.start()
-    t_prev = time.time()
+    images = [cv2.resize(cv2.imread(image, 0), (0, 0), fx=0.25, fy=0.25) for image in get_images()]
+    print("got images")
     
-    # Iterate through files
-    i = 0
-    while vrc.is_running and vra.is_running:
-        
-        # Open current image and scale down for speed
-        image = vrc.capture()
-        if type(image) == type(None):
-            break
-        
-        # Get the translation of the camera
-        ax, ay, az = vra.get_accelerometer_raw()
-        ox, oy, oz = vra.get_orientation_radians()
-        
-        orienter.update(time.time() - t_prev, [ax, ay, az], [ox, oy, oz])
-        t_prev = time.time()
+    locations = [get_corners_fast(image, dist_to_edge_threshold=25) for image in images]
+    print("got locations")
     
-        # Get the locations and descriptors of the features
-        feature_locations, feature_descriptors = surf.detectAndCompute(image, None)
-        
-        
-        # Update the dictionary with newly spotted features
-        feature_dict.update_dictionary(feature_locations, feature_descriptors)
-        
-#        i += 1
-#        if i >= 10:
-#            break
-      
-    presence, locations = feature_dict.get_reproj_targets(15)
-    
-    T_guess = orienter.get_camera_pose_guess()
-    
-    true_x, true_y = np.array(locations).T[0].T, np.array(locations).T[1].T
-    
-    # Create the bundle adjuster
-    bundle_adjuster = Bundle_adjuster(presence, locations, camera, T_guess = T_guess)
-    bundle_adjuster.optimise(5)
-    camera.plot_reprojection(bundle_adjuster.X, bundle_adjuster.T, true_x, true_y)
-    camera.plot_3d(bundle_adjuster.X)
-    
-    
-    print(bundle_adjuster)
-        
+    descriptors = [brief(image, location) for image, location in zip(images, locations)]
+    print("got descriptors")
 
-
-def get_virtual_realtime_streams(images_directory, images_file_name, data_directory, data_file):
-    def get_images(directory, name):  
-        # Find all pictures containing name in directory
-        files = []
-        numbers = []
-        for f in os.listdir(directory):
-            if name in f:
-                numbers.append(int(f.split(name)[1].split('.')[0]))
-                files.append(f)
-        
-        # Modify files to contain full path
-        files = [directory + "/" + f for f in files]
-        
-        # Get times when images would be seen by camera
-        times = []
-        t = 0
-        for f in files:
-            times.append(t)
-            t += (1.0 / 30)
-        
-        # Order by number in name and return 
-        numbers, files = list(zip(*sorted(zip(numbers, files))))
-        return times, files
+    for locs, descs in zip(locations, descriptors):
+        feature_dict.update_dictionary(locs, descs)
+    presence, feature_locations = feature_dict.get_reproj_targets()
     
-    def get_data(directory, data_file):
-        data = open(directory + "/" + data_file)
+    features_on_video(images,feature_locations )
 
-        T = []
-        A = []
-        W = []
-        
-        for i, d in enumerate(data):        
-            if i <= 1:
-                continue
-                
-            try:
-                t, ax, ay, az, wx, wy, wz = d.split(',')[:7]
-                
-                t = float(t)
-                ax, ay, az = float(ax), float(ay), float(az)
-                wx, wy, wz = float(wx), float(wy), float(wz)
-                
-                if t < 8:
-                    continue
-                else:
-                    if t > 16:
-                        break
-                    t -= 8
-                
-                T.append(t)
-                A.append([ax, ay, az])
-                W.append([wx, wy, wz])
-            except:
-                break
-        
-        data.close()
-        
-        return np.array(T).T, np.array(A).T, np.array(W).T
+#     
+#    presence, locations = feature_dict.get_reproj_targets()
+#    features_on_video(frames, locations)
+#        
+#    presence, locations = feature_dict.get_reproj_targets(5)
+#    
+#    T_guess = orienter.get_camera_pose_guess()
+#    
+#    true_x, true_y = np.array(locations).T[0].T, np.array(locations).T[1].T
+#    
+#    # Create the bundle adjuster
+#    bundle_adjuster = Bundle_adjuster(presence, locations, camera, T_guess = T_guess)
+#    bundle_adjuster.optimise(10)
+#    camera.plot_reprojection(bundle_adjuster.X, bundle_adjuster.T, true_x, true_y)
+##    camera.plot_3d(bundle_adjuster.X)
+#    
     
-    vra = Virtual_Realtime_Accelerometer(*get_data(data_directory, data_file))
-    vrc = Virtual_Realtime_Camera(*get_images(images_directory, images_file_name))
-    
-    return vra, vrc
 
-
+def get_images():
+    directory = "../Data/Photos1"
+    image_files = []
+    for f in os.listdir(directory):
+        image_files.append(directory + "/" + f)
+    return image_files
 
 if __name__ == '__main__':
     main()
