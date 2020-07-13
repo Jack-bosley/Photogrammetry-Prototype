@@ -3,8 +3,7 @@
 A crude attempt at a point cloud scanner
 
 
-To Do:
-- Camera calibration
-- Combine feature detection, camera position tracker, and bundle adjustment
-...
-- Modify to run on raspberry pi
+Project on hiatus
+- Bundle adjustment works!
+- Featurepoint recognition fails to recognise features well enough over successive frames
+- Need better alternative to give bundle adjustment clean enough data
