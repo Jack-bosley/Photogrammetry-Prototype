@@ -2,7 +2,7 @@
 
 A crude attempt at a point cloud scanner
 
-![Demo Image](https://gitlab.com/JackBosley/point-cloud-scanner/Images/Demo.gif)
+![Demo Image](Images/Demo.gif)
 
 Project on hiatus
 - Bundle adjustment works!
