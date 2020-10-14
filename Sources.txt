@@ -1,0 +1,32 @@
+Photogrammetry Sources
+
+BRIEF: Binary Robust Independent Elementary Features
+Michael Calonder, Vincent Lepetit, Christoph Strecha, and Pascal Fua
+
+Bundle Adjustment – A Modern Synthesis
+Bill Triggs, Philip Mclauchlan, Richard Hartley, Andrew Fitzgibbon
+
+Bundle Adjustment in the Large
+Sameer Agarwal1, Noah Snavely2, Steven M. Seitz3, and Richard Szeliski4
+
+Bundle Adjustment Revisited
+Yu Chen1, Yisong Chen1, Guoping Wang1
+
+BUNDLE ADJUSTMENT RULES
+Chris Engels, Henrik Stewenius, David Nister
+
+A COMBINED CORNER AND EDGE DETECTOR
+Chris Harris & Mike Stephens
+
+Similarity Search in High Dimensions via Hashing
+Aristides Gionis  Piotr Indyky Rajeev Motwaniz
+
+Multiple View Geometry in Computer Vision Second Edition
+Richard Hartley    Australian National University, Canberra, Australia
+Andrew Zisserman   University of Oxford, UK
+
+Pushing the Envelope of Modern Methods for Bundle Adjustment ∗
+Yekeun Jeong†∗, David Nister, Drew Steedly, Richard Szeliski, and In-So Kweon†
+
+Robust Bundle Adjustment Revisited
+Christopher Zach
